@@ -1,0 +1,12 @@
+name: d1066-simulator
+title: d1066-simulator
+username: melondonkey
+account: melondonkey
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 16815463
+bundleId: 11664624
+url: https://melondonkey.shinyapps.io/d1066-simulator/
+version: 1
+asMultiple: FALSE
+asStatic: FALSE
