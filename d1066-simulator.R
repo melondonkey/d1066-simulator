@@ -75,6 +75,119 @@ run_simulations <- function(init_units, n_sims = 1000) {
   results_df
 }
 
+# ── Scenario module: one self-contained battle scenario ───────────────────
+
+scenarioUI <- function(id) {
+  ns <- NS(id)
+  tagList(
+    # Sidebar layout per scenario: left = inputs, right = outputs.
+    # We use layout_sidebar so each tab has its own sidebar.
+    layout_sidebar(
+      sidebar = sidebar(
+        width = 320,
+        title = "Battle Setup",
+
+        # Attacker inputs
+        card(
+          card_header(class = "bg-danger text-white",
+                      span("\u2694\uFE0F Attackers")),
+          card_body(
+            class = "pt-2 pb-1",
+            layout_columns(
+              col_widths = c(4, 4, 4),
+              unit_input(ns("atk_d6"),  "d6",  2),
+              unit_input(ns("atk_d12"), "d12", 2),
+              unit_input(ns("atk_d20"), "d20", 2)
+            )
+          )
+        ),
+
+        # Defender inputs
+        card(
+          card_header(class = "bg-primary text-white",
+                      span("\uD83D\uDEE1\uFE0F Defenders")),
+          card_body(
+            class = "pt-2 pb-1",
+            numericInput(ns("def_castle"), "\uD83C\uDFF0 Castles",
+                         value = 0, min = 0, step = 1),
+            layout_columns(
+              col_widths = c(4, 4, 4),
+              unit_input(ns("def_d6"),  "d6",  2),
+              unit_input(ns("def_d12"), "d12", 2),
+              unit_input(ns("def_d20"), "d20", 2)
+            )
+          )
+        ),
+
+        numericInput(ns("sims"), "Simulations",
+                     value = 1000, min = 1, step = 100),
+        actionButton(ns("run"), "\u25B6 Run Simulation",
+                     class = "btn-success btn-lg w-100 mt-2")
+      ),
+
+      # Main panel
+      layout_columns(
+        col_widths = c(5, 7),
+        card(
+          card_header("Attacker Win Probability"),
+          card_body(plotlyOutput(ns("win_gauge"), height = "250px"))
+        ),
+        layout_columns(
+          col_widths = c(4, 4, 4),
+          value_box(
+            title    = "Attacker Win %",
+            value    = textOutput(ns("atk_pct"), inline = TRUE),
+            showcase = span(style = "font-size: 2.5rem;", "\u2694\uFE0F"),
+            theme    = "danger"
+          ),
+          value_box(
+            title    = "Defender Win %",
+            value    = textOutput(ns("def_pct"), inline = TRUE),
+            showcase = span(style = "font-size: 2.5rem;", "\uD83D\uDEE1\uFE0F"),
+            theme    = "primary"
+          ),
+          value_box(
+            title    = "Simulations Run",
+            value    = textOutput(ns("n_sims_display"), inline = TRUE),
+            showcase = span(style = "font-size: 2.5rem;", "\uD83C\uDFB2"),
+            theme    = "secondary"
+          )
+        )
+      ),
+
+      layout_columns(
+        col_widths = c(5, 7),
+        card(
+          card_header("Outcome Distribution"),
+          card_body(plotOutput(ns("dist_plot"), height = "400px"))
+        ),
+        card(
+          card_header("Marginal Unit Value"),
+          card_body(
+            p(class = "text-muted small",
+              "Win-rate change from adding +1 of each unit type to the current setup."),
+            layout_columns(
+              col_widths = c(6, 6),
+              card(
+                card_header(class = "bg-danger text-white",
+                            "\u2694\uFE0F Attacker +1"),
+                card_body(uiOutput(ns("atk_marginal")))
+              ),
+              card(
+                card_header(class = "bg-primary text-white",
+                            "\uD83D\uDEE1\uFE0F Defender +1"),
+                card_body(uiOutput(ns("def_marginal")))
+              )
+            ),
+            hr(),
+            uiOutput(ns("recommendation"))
+          )
+        )
+      )
+    )
+  )
+}
+
 # ── Theme ────────────────────────────────────────────────────────────────
 
 app_theme <- bs_theme(
