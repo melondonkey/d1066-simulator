@@ -79,66 +79,48 @@ run_simulations <- function(init_units, n_sims = 1000) {
 
 scenarioUI <- function(id, letter = NULL) {
   ns <- NS(id)
-  tagList(
-    div(
-      style = "display: flex; justify-content: flex-end; padding: 4px 12px 0;",
-      actionButton(ns("close"), "\u2715",
-                   class = "btn-sm btn-outline-secondary",
-                   title = "Close this scenario")
-    ),
-    # Sidebar layout per scenario: left = inputs, right = outputs.
-    # We use layout_sidebar so each tab has its own sidebar.
-    layout_sidebar(
-      sidebar = sidebar(
-        width = 320,
-        title = if (!is.null(letter)) {
-          tagList(
-            span(style = "color:#e74c3c; font-weight:700;", letter),
-            " Battle Setup"
-          )
-        } else {
-          "Battle Setup"
-        },
+  # Sidebar layout per scenario: left = inputs, right = outputs.
+  # We use layout_sidebar so each tab has its own sidebar.
+  layout_sidebar(
+    sidebar = sidebar(
+      width = 320,
+      title = "Battle Setup",
 
-        # Attacker inputs
-        card(
-          card_header(class = "bg-danger text-white",
-                      span("\u2694\uFE0F Attackers")),
-          card_body(
-            class = "pt-2 pb-1",
-            layout_columns(
-              col_widths = breakpoints(sm = c(4, 4, 4),
-                                        xs = c(12, 12, 12)),
-              unit_input(ns("atk_d6"),  "d6",  2),
-              unit_input(ns("atk_d12"), "d12", 2),
-              unit_input(ns("atk_d20"), "d20", 2)
-            )
+      # Attacker inputs
+      card(
+        card_header(class = "bg-danger text-white",
+                    span("\u2694\uFE0F Attackers")),
+        card_body(
+          class = "pt-2 pb-1",
+          div(class = "dice-row",
+            unit_input(ns("atk_d6"),  "d6",  2),
+            unit_input(ns("atk_d12"), "d12", 2),
+            unit_input(ns("atk_d20"), "d20", 2)
           )
-        ),
-
-        # Defender inputs
-        card(
-          card_header(class = "bg-primary text-white",
-                      span("\uD83D\uDEE1\uFE0F Defenders")),
-          card_body(
-            class = "pt-2 pb-1",
-            numericInput(ns("def_castle"), "\uD83C\uDFF0 Castles",
-                         value = 0, min = 0, step = 1),
-            layout_columns(
-              col_widths = breakpoints(sm = c(4, 4, 4),
-                                        xs = c(12, 12, 12)),
-              unit_input(ns("def_d6"),  "d6",  2),
-              unit_input(ns("def_d12"), "d12", 2),
-              unit_input(ns("def_d20"), "d20", 2)
-            )
-          )
-        ),
-
-        numericInput(ns("sims"), "Simulations",
-                     value = 1000, min = 1, step = 100),
-        actionButton(ns("run"), "\u25B6 Run Simulation",
-                     class = "btn-success btn-lg w-100 mt-2")
+        )
       ),
+
+      # Defender inputs
+      card(
+        card_header(class = "bg-primary text-white",
+                    span("\uD83D\uDEE1\uFE0F Defenders")),
+        card_body(
+          class = "pt-2 pb-1",
+          numericInput(ns("def_castle"), "\uD83C\uDFF0 Castles",
+                       value = 0, min = 0, step = 1),
+          div(class = "dice-row",
+            unit_input(ns("def_d6"),  "d6",  2),
+            unit_input(ns("def_d12"), "d12", 2),
+            unit_input(ns("def_d20"), "d20", 2)
+          )
+        )
+      ),
+
+      numericInput(ns("sims"), "Simulations",
+                   value = 1000, min = 1, step = 100),
+      actionButton(ns("run"), "\u25B6 Run Simulation",
+                   class = "btn-success btn-lg w-100 mt-2")
+    ),
 
       # Main panel
       layout_columns(
@@ -207,7 +189,6 @@ scenarioUI <- function(id, letter = NULL) {
           )
         )
       )
-    )
   )
 }
 
@@ -441,7 +422,6 @@ scenarioServer <- function(id, letter = NULL) {
       )
     })
 
-    list(close = reactive(input$close))
   })
 }
 
@@ -473,47 +453,238 @@ ui <- function(request) page_fluid(
     tags$meta(name = "viewport",
               content = "width=device-width, initial-scale=1, shrink-to-fit=no"),
     tags$style(HTML("
-      /* Tab strip: horizontal scroll on overflow instead of wrapping */
+      /* ── Reset: strip page_fluid container padding so we can go edge-to-edge */
+      html, body { overflow-x: hidden; }
+      body > .container-fluid {
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+        max-width: 100% !important;
+        overflow-x: hidden;
+      }
+
+      /* ── Title bar ──────────────────────────────────────────────────────── */
+      .app-title-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 14px;
+        border-bottom: 1px solid #3a3f44;
+      }
+
+      /* ── Fixed header: title bar + tab strip bar pinned to top of viewport ─ */
+      /* Using position:fixed (not sticky) because navset_tab renders           */
+      /* tab-content as a sibling of nav-tabs inside the same container, and    */
+      /* overflow:hidden on a sticky ancestor would clip it. Fixed + a spacer   */
+      /* div below the header is the only reliable approach.                    */
+      .app-sticky-header {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        width: 100%;
+        z-index: 1030;
+        background: #272b30;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.5);
+      }
+
+      /* Spacer div pushes content below the fixed header.                      */
+      /* JS sets its height to match .app-sticky-header's actual rendered height */
+      #header-spacer {
+        height: 89px;   /* title bar ~41px + tab bar 48px; JS will correct this */
+      }
+
+      /* ── Control bar row ────────────────────────────────────────────────── */
+      .scenario-tabs-row {
+        display: flex;
+        align-items: flex-end;
+        padding: 0;
+        background: #272b30;
+        border-bottom: 2px solid #3a3f44;
+      }
+
+      /* ── Blue action buttons ─────────────────────────────────────────────── */
+      .tabs-row-btn {
+        flex: 0 0 48px;
+        width: 48px;
+        height: 48px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 0 !important;
+        margin: 0 !important;
+        background: #3498db !important;
+        color: #ffffff !important;
+        border: 0 !important;
+        border-radius: 0 !important;
+        font-size: 1.5rem;
+        font-weight: 700;
+        line-height: 1;
+        cursor: pointer;
+        box-shadow: none !important;
+        transition: background 0.12s;
+        -webkit-tap-highlight-color: transparent;
+      }
+      .tabs-row-btn:hover  { background: #2980b9 !important; }
+      .tabs-row-btn:active { background: #2471a3 !important; }
+      .tabs-row-btn:focus  { outline: none; color: #fff !important; }
+      .tabs-row-btn:focus-visible { outline: 2px solid #85c1e9; outline-offset: -2px; }
+      .tabs-row-btn svg { width: 22px; height: 22px; fill: currentColor; display: block; }
+
+      /* ── Tab strip wrapper: fills space between buttons ─────────────────── */
+      .scenario-tabs-wrapper {
+        flex: 1 1 0;
+        min-width: 0;
+        overflow: hidden;      /* clip tab-content inside wrapper; it still       */
+        height: 48px;          /* renders in the DOM and Shiny can reach it;      */
+      }                        /* only visually clipped inside the fixed header.  */
+
+      /* ── nav-tabs ul ─────────────────────────────────────────────────────── */
       #scenario_tabs.nav-tabs {
+        display: flex !important;
         flex-wrap: nowrap;
         overflow-x: auto;
         overflow-y: hidden;
         -webkit-overflow-scrolling: touch;
-        scrollbar-width: thin;
-        border-bottom: 1px solid #3a3f44;
+        scrollbar-width: none;
+        border-bottom: 0 !important;
+        margin: 0;
+        padding: 0;
+        height: 48px;
+        align-items: flex-end;
+        list-style: none;
       }
-      #scenario_tabs.nav-tabs::-webkit-scrollbar {
-        height: 4px;
+      #scenario_tabs.nav-tabs::-webkit-scrollbar { display: none; }
+      #scenario_tabs.nav-tabs > li {
+        display: flex;
+        align-items: flex-end;
+        flex-shrink: 0;
+        margin: 0;
       }
-      #scenario_tabs.nav-tabs::-webkit-scrollbar-thumb {
-        background: #3a3f44;
-        border-radius: 2px;
-      }
-      /* Make Greek-letter tabs more readable and tappable */
       #scenario_tabs.nav-tabs > li > a {
-        padding: 8px 14px;
-        font-size: 1.05rem;
-        font-weight: 600;
-        min-width: 44px;
-        text-align: center;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 42px;
+        min-width: 78px;
+        padding: 0 14px;
+        font-size: 1.1rem;
+        font-weight: 700;
         white-space: nowrap;
+        border-radius: 6px 6px 0 0;
+        border: 1px solid transparent;
+        border-bottom: 0 !important;
+        color: #7f8c8d;
+        text-decoration: none;
+        transition: color 0.12s, background 0.12s;
+        -webkit-tap-highlight-color: transparent;
       }
-      /* Make the '+' tab visually distinct */
+      #scenario_tabs.nav-tabs > li.active > a,
+      #scenario_tabs.nav-tabs > li > a.active {
+        color: #ecf0f1;
+        background: #32383e;
+        border-color: #4a5056 #4a5056 #32383e !important;
+      }
+      #scenario_tabs.nav-tabs > li > a:hover:not(.active) {
+        color: #bdc3c7;
+        background: #2c3136;
+      }
       #scenario_tabs.nav-tabs > li > a[data-value='__add_tab__'] {
         color: #2ecc71;
-        font-weight: 700;
-        font-size: 1.25rem;
+        font-size: 1.5rem;
+        min-width: 48px;
       }
+      #scenario_tabs.nav-tabs > li > a[data-value='__add_tab__']:hover {
+        color: #27ae60;
+        background: #2c3136;
+      }
+
+      /* ── tab-content and scenario content: no container framing ─────────── */
+      .tab-content {
+        border: 0 !important;
+        background: transparent !important;
+        padding: 0 !important;
+      }
+      .tab-content > .tab-pane {
+        border: 0 !important;
+        background: transparent !important;
+        padding: 0 !important;
+      }
+      .bslib-sidebar-layout {
+        border: 0 !important;
+        background: transparent !important;
+        box-shadow: none !important;
+      }
+      .bslib-sidebar-layout > .main { background: transparent !important; }
+      .bslib-sidebar-layout > .collapse-toggle {
+        visibility: hidden !important;
+        width: 0 !important;
+        padding: 0 !important;
+        margin: 0 !important;
+        pointer-events: none !important;
+      }
+
+      /* ── Dice input row: always 3 equal columns inside sidebar ─────────── */
+      .dice-row {
+        display: flex;
+        gap: 8px;
+      }
+      .dice-row > div {
+        flex: 1 1 0;
+        min-width: 0;
+      }
+
+      /* ── Mobile ──────────────────────────────────────────────────────────── */
       @media (max-width: 575.98px) {
+        .tabs-row-btn { flex: 0 0 44px; width: 44px; height: 44px; font-size: 1.3rem; }
+        .tabs-row-btn svg { width: 20px; height: 20px; }
+        .scenario-tabs-wrapper { height: 44px; }
+        #scenario_tabs.nav-tabs { height: 44px; }
+        #scenario_tabs.nav-tabs > li > a { height: 38px; min-width: 66px; padding: 0 10px; font-size: 1rem; }
+        .app-title-bar { padding: 6px 12px; }
+        #header-spacer { height: 85px; }
+
+        /* Sidebar on mobile: bslib absolutely-positions the aside panel,
+           but the grid row still reserves its height as a gap.
+           Collapse that reserved space so only .main sets the height. */
         .bslib-sidebar-layout {
-          --_sidebar-width: 88vw !important;
+          --_sidebar-width: 90vw !important;
         }
-        .app-title-bar { padding: 6px 10px; }
-        .app-title-text { font-size: 0.95rem !important; }
-        .app-title-icon { font-size: 1.1rem !important; }
+        .bslib-sidebar-layout > aside {
+          overflow-y: auto !important;
+          max-height: calc(100dvh - 85px) !important;
+        }
+        /* When sidebar is OPEN on mobile the aside is position:absolute (out of
+           flow), so the grid cell it occupied becomes a phantom gap. Span .main
+           across the full grid to collapse that gap. Only do this when open —
+           bslib adds .sidebar-collapsed when closed, removes it when open. */
+        .bslib-sidebar-layout:not(.sidebar-collapsed) > .main {
+          grid-row: 1 !important;
+          grid-column: 1 / -1 !important;
+        }
       }
     ")),
     tags$script(HTML("
+      // Move tab-content out of the clipped fixed header into normal document
+      // flow so it scrolls freely below the fixed bar.
+      // Runs after Shiny is fully initialised (safe on mobile browsers).
+      function hoistTabContent() {
+        var spacer     = document.getElementById('header-spacer');
+        var header     = document.querySelector('.app-sticky-header');
+        var tabContent = document.querySelector('.scenario-tabs-wrapper .tab-content');
+        if (tabContent && spacer && !spacer._hoisted) {
+          spacer.parentNode.insertBefore(tabContent, spacer.nextSibling);
+          spacer._hoisted = true;
+        }
+        // Always sync spacer height to actual fixed header height
+        if (header && spacer) {
+          spacer.style.height = header.offsetHeight + 'px';
+        }
+      }
+      // Fire immediately, on Shiny ready, and on resize
+      document.addEventListener('DOMContentLoaded', hoistTabContent);
+      $(document).on('shiny:sessioninitialized', hoistTabContent);
+      window.addEventListener('resize', hoistTabContent);
+
       Shiny.addCustomMessageHandler('scroll_active_tab', function(_) {
         setTimeout(function() {
           var el = document.querySelector('#scenario_tabs li.active > a, #scenario_tabs .nav-link.active');
@@ -521,6 +692,16 @@ ui <- function(request) page_fluid(
             el.scrollIntoView({behavior: 'smooth', inline: 'center', block: 'nearest'});
           }
         }, 50);
+      });
+      // Global sidebar toggle: forward clicks to the active tab's hidden bslib toggle
+      document.addEventListener('click', function(e) {
+        var btn = e.target.closest('#global_sidebar_toggle');
+        if (!btn) return;
+        e.preventDefault();
+        var activePane = document.querySelector('.tab-content > .tab-pane.active');
+        if (!activePane) return;
+        var t = activePane.querySelector('.bslib-sidebar-layout > .collapse-toggle');
+        if (t) t.click();
       });
       setInterval(function() {
         Shiny.setInputValue('heartbeat', new Date().getTime());
@@ -541,30 +722,58 @@ ui <- function(request) page_fluid(
     "))
   ),
 
-  # Title bar above the tab strip
+  # Sticky header: title bar + control bar never scroll away
   div(
-    class = "app-title-bar",
-    style = "display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid #3a3f44;",
-    span(class = "app-title-icon", style = "font-size: 1.4rem;", "\u2694\uFE0F"),
-    span(class = "app-title-text",
-         style = "font-size: 1.15rem; font-weight: 600;",
-         "d1066 Battle Simulator")
+    class = "app-sticky-header",
+
+    div(
+      class = "app-title-bar",
+      span(class = "app-title-icon", style = "font-size: 1.4rem;", "\u2694\uFE0F"),
+      span(class = "app-title-text",
+           style = "font-size: 1.15rem; font-weight: 600;",
+           "d1066 Battle Simulator")
+    ),
+
+    # Control bar: [sidebar toggle] [scrollable tab strip] [close]
+    div(
+      class = "scenario-tabs-row",
+      tags$button(
+        id = "global_sidebar_toggle",
+        class = "tabs-row-btn sidebar-toggle-btn",
+        type = "button",
+        `aria-label` = "Toggle Battle Setup sidebar",
+        HTML('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" aria-hidden="true">
+                <path d="M14 2a1 1 0 0 1 1 1v10a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3a1 1 0 0 1 1-1zM2 1a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V3a2 2 0 0 0-2-2z"/>
+                <path d="M3 4.5a.5.5 0 0 1 .5-.5h2a.5.5 0 0 1 .5.5v7a.5.5 0 0 1-.5.5h-2a.5.5 0 0 1-.5-.5z"/>
+              </svg>')
+      ),
+      div(
+        class = "scenario-tabs-wrapper",
+        navset_tab(
+          id = "scenario_tabs",
+          nav_panel(
+            title = GREEK_LETTERS[1],
+            value = "scenario_alpha",
+            scenarioUI("scenario_alpha", letter = GREEK_LETTERS[1])
+          ),
+          nav_panel(
+            title = "+",
+            value = "__add_tab__"
+          )
+        )
+      ),
+      actionButton(
+        "global_close_scenario",
+        label = HTML("&times;"),
+        class = "tabs-row-btn close-scenario-btn",
+        title = "Close active scenario"
+      )
+    )
   ),
 
-  # The scenario tab strip — content rendered server-side via insertTab/removeTab.
-  # Start with one tab (Α) and the trailing "+" tab.
-  navset_tab(
-    id = "scenario_tabs",
-    nav_panel(
-      title = GREEK_LETTERS[1],
-      value = "scenario_alpha",
-      scenarioUI("scenario_alpha", letter = GREEK_LETTERS[1])
-    ),
-    nav_panel(
-      title = "\u002B",
-      value = "__add_tab__"
-    )
-  )
+  # Spacer: pushes page content below the fixed header.
+  # JS measures the actual header height and sets this dynamically.
+  tags$div(id = "header-spacer")
 )
 
 # ── Server ───────────────────────────────────────────────────────────────
@@ -588,36 +797,31 @@ server <- function(input, output, session) {
   }
 
   mount_scenario <- function(id, letter) {
-    module <- scenarioServer(id, letter = letter)
-
-    observeEvent(module$close(), {
-      current <- scenarios()
-      if (nrow(current) <= 1) {
-        showNotification(
-          "Keep at least one scenario open.",
-          type = "warning",
-          duration = 3
-        )
-        return()
-      }
-
-      remaining <- current[current$id != id, , drop = FALSE]
-      if (nrow(remaining) == nrow(current)) return()
-
-      was_selected <- identical(input$scenario_tabs, id)
-      nav_remove("scenario_tabs", target = id, session = session)
-      scenarios(remaining)
-
-      if (was_selected) {
-        nav_select("scenario_tabs",
-                   selected = remaining$id[nrow(remaining)],
-                   session  = session)
-      }
-    }, ignoreInit = TRUE)
+    scenarioServer(id, letter = letter)
   }
 
   # Boot up the alpha scenario's server logic.
   mount_scenario("scenario_alpha", GREEK_LETTERS[1])
+
+  # Global close: removes whichever scenario is currently active.
+  observeEvent(input$global_close_scenario, {
+    current <- scenarios()
+    active  <- input$scenario_tabs
+    if (is.null(active) || identical(active, "__add_tab__")) return()
+    if (nrow(current) <= 1) {
+      showNotification("Keep at least one scenario open.",
+                       type = "warning", duration = 3)
+      return()
+    }
+    remaining <- current[current$id != active, , drop = FALSE]
+    if (nrow(remaining) == nrow(current)) return()
+
+    nav_remove("scenario_tabs", target = active, session = session)
+    scenarios(remaining)
+    nav_select("scenario_tabs",
+               selected = remaining$id[nrow(remaining)],
+               session  = session)
+  }, ignoreInit = TRUE)
 
   # ── Handle clicks on the "+" tab to add a new scenario ──
   observeEvent(input$scenario_tabs, {
