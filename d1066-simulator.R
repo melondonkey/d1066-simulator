@@ -443,7 +443,48 @@ ui <- function(request) page_fluid(
   tags$head(
     tags$meta(name = "viewport",
               content = "width=device-width, initial-scale=1, shrink-to-fit=no"),
+    tags$style(HTML("
+      /* Tab strip: horizontal scroll on overflow instead of wrapping */
+      #scenario_tabs.nav-tabs {
+        flex-wrap: nowrap;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: thin;
+        border-bottom: 1px solid #3a3f44;
+      }
+      #scenario_tabs.nav-tabs::-webkit-scrollbar {
+        height: 4px;
+      }
+      #scenario_tabs.nav-tabs::-webkit-scrollbar-thumb {
+        background: #3a3f44;
+        border-radius: 2px;
+      }
+      /* Make Greek-letter tabs more readable and tappable */
+      #scenario_tabs.nav-tabs > li > a {
+        padding: 8px 14px;
+        font-size: 1.05rem;
+        font-weight: 600;
+        min-width: 44px;
+        text-align: center;
+        white-space: nowrap;
+      }
+      /* Make the '+' tab visually distinct */
+      #scenario_tabs.nav-tabs > li > a[data-value='__add_tab__'] {
+        color: #2ecc71;
+        font-weight: 700;
+        font-size: 1.25rem;
+      }
+    ")),
     tags$script(HTML("
+      Shiny.addCustomMessageHandler('scroll_active_tab', function(_) {
+        setTimeout(function() {
+          var el = document.querySelector('#scenario_tabs li.active > a, #scenario_tabs .nav-link.active');
+          if (el && el.scrollIntoView) {
+            el.scrollIntoView({behavior: 'smooth', inline: 'center', block: 'nearest'});
+          }
+        }, 50);
+      });
       setInterval(function() {
         Shiny.setInputValue('heartbeat', new Date().getTime());
       }, 30000);
@@ -547,6 +588,9 @@ server <- function(input, output, session) {
 
     # Switch the user to the brand-new tab (don't leave them on "+").
     nav_select("scenario_tabs", selected = new_id, session = session)
+
+    # Scroll the newly-active tab into view (helps on mobile when tabs overflow).
+    session$sendCustomMessage("scroll_active_tab", list())
   }, ignoreInit = TRUE)
 
   # ── Bookmarking: keep current behavior (URL captures all inputs) ──
