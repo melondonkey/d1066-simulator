@@ -441,6 +441,8 @@ ui <- function(request) page_fluid(
 
   # Heartbeat + custom disconnect overlay (unchanged)
   tags$head(
+    tags$meta(name = "viewport",
+              content = "width=device-width, initial-scale=1, shrink-to-fit=no"),
     tags$script(HTML("
       setInterval(function() {
         Shiny.setInputValue('heartbeat', new Date().getTime());
