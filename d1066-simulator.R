@@ -77,7 +77,7 @@ run_simulations <- function(init_units, n_sims = 1000) {
 
 # ── Scenario module: one self-contained battle scenario ───────────────────
 
-scenarioUI <- function(id) {
+scenarioUI <- function(id, letter = NULL) {
   ns <- NS(id)
   tagList(
     # Sidebar layout per scenario: left = inputs, right = outputs.
@@ -131,7 +131,14 @@ scenarioUI <- function(id) {
       layout_columns(
         col_widths = breakpoints(md = c(5, 7), xs = c(12, 12)),
         card(
-          card_header("Attacker Win Probability"),
+          card_header(
+            span(
+              class = "scenario-letter",
+              style = "color: #adb5bd; font-weight: 700; margin-right: 8px;",
+              textOutput(ns("scenario_letter"), inline = TRUE)
+            ),
+            "Attacker Win Probability"
+          ),
           card_body(plotlyOutput(ns("win_gauge"), height = "250px"))
         ),
         layout_columns(
@@ -191,8 +198,12 @@ scenarioUI <- function(id) {
   )
 }
 
-scenarioServer <- function(id) {
+scenarioServer <- function(id, letter = NULL) {
   moduleServer(id, function(input, output, session) {
+
+    output$scenario_letter <- renderText({
+      if (is.null(letter)) "" else letter
+    })
 
     raw_results <- reactive({
       init_units <- c(input$atk_d6, input$atk_d12, input$atk_d20,
@@ -532,7 +543,7 @@ ui <- function(request) page_fluid(
     nav_panel(
       title = GREEK_LETTERS[1],
       value = "scenario_alpha",
-      scenarioUI("scenario_alpha")
+      scenarioUI("scenario_alpha", letter = GREEK_LETTERS[1])
     ),
     nav_panel(
       title = "\u002B",
@@ -552,7 +563,7 @@ server <- function(input, output, session) {
   scenarios <- reactiveVal(c("scenario_alpha"))
 
   # Boot up the alpha scenario's server logic.
-  scenarioServer("scenario_alpha")
+  scenarioServer("scenario_alpha", letter = GREEK_LETTERS[1])
 
   # Helper: convert internal id -> display index (1-based).
   scenario_index <- function(id) match(id, scenarios())
@@ -589,13 +600,13 @@ server <- function(input, output, session) {
       nav      = nav_panel(
         title = new_label,
         value = new_id,
-        scenarioUI(new_id)
+        scenarioUI(new_id, letter = new_label)
       ),
       session  = session
     )
 
     # Boot up the new scenario's server logic.
-    scenarioServer(new_id)
+    scenarioServer(new_id, letter = new_label)
 
     # Track it in our reactive list.
     scenarios(c(current, new_id))
