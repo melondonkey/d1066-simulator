@@ -85,7 +85,14 @@ scenarioUI <- function(id, letter = NULL) {
     layout_sidebar(
       sidebar = sidebar(
         width = 320,
-        title = "Battle Setup",
+        title = if (!is.null(letter)) {
+          tagList(
+            span(style = "color:#e74c3c; font-weight:700;", letter),
+            " Battle Setup"
+          )
+        } else {
+          "Battle Setup"
+        },
 
         # Attacker inputs
         card(
