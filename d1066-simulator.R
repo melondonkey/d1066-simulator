@@ -80,6 +80,12 @@ run_simulations <- function(init_units, n_sims = 1000) {
 scenarioUI <- function(id, letter = NULL) {
   ns <- NS(id)
   tagList(
+    div(
+      style = "display: flex; justify-content: flex-end; padding: 4px 12px 0;",
+      actionButton(ns("close"), "\u2715",
+                   class = "btn-sm btn-outline-secondary",
+                   title = "Close this scenario")
+    ),
     # Sidebar layout per scenario: left = inputs, right = outputs.
     # We use layout_sidebar so each tab has its own sidebar.
     layout_sidebar(
@@ -434,6 +440,8 @@ scenarioServer <- function(id, letter = NULL) {
         )
       )
     })
+
+    list(close = reactive(input$close))
   })
 }
 
@@ -565,26 +573,63 @@ server <- function(input, output, session) {
 
   session$allowReconnect("force")
 
-  # ── Track currently-open scenarios (by stable internal id) ──
+  # ── Track currently-open scenarios (stable internal id + display letter) ──
   # We always keep the original alpha scenario (started in UI).
-  scenarios <- reactiveVal(c("scenario_alpha"))
+  scenarios <- reactiveVal(
+    data.frame(id = "scenario_alpha", letter = GREEK_LETTERS[1],
+               stringsAsFactors = FALSE)
+  )
+  next_scenario_seq <- reactiveVal(1L)
+
+  next_scenario_id <- function() {
+    next_seq <- next_scenario_seq() + 1L
+    next_scenario_seq(next_seq)
+    sprintf("scenario_%04d", next_seq)
+  }
+
+  mount_scenario <- function(id, letter) {
+    module <- scenarioServer(id, letter = letter)
+
+    observeEvent(module$close(), {
+      current <- scenarios()
+      if (nrow(current) <= 1) {
+        showNotification(
+          "Keep at least one scenario open.",
+          type = "warning",
+          duration = 3
+        )
+        return()
+      }
+
+      remaining <- current[current$id != id, , drop = FALSE]
+      if (nrow(remaining) == nrow(current)) return()
+
+      was_selected <- identical(input$scenario_tabs, id)
+      nav_remove("scenario_tabs", target = id, session = session)
+      scenarios(remaining)
+
+      if (was_selected) {
+        nav_select("scenario_tabs",
+                   selected = remaining$id[nrow(remaining)],
+                   session  = session)
+      }
+    }, ignoreInit = TRUE)
+  }
 
   # Boot up the alpha scenario's server logic.
-  scenarioServer("scenario_alpha", letter = GREEK_LETTERS[1])
-
-  # Helper: convert internal id -> display index (1-based).
-  scenario_index <- function(id) match(id, scenarios())
+  mount_scenario("scenario_alpha", GREEK_LETTERS[1])
 
   # ── Handle clicks on the "+" tab to add a new scenario ──
   observeEvent(input$scenario_tabs, {
     if (!identical(input$scenario_tabs, "__add_tab__")) return()
 
     current <- scenarios()
-    if (length(current) >= MAX_SCENARIOS) {
+    available_letters <- base::setdiff(GREEK_LETTERS, current$letter)
+    if (length(available_letters) == 0) {
       # Bounce the user off the "+" tab back to the last real scenario,
       # and tell them why nothing happened.
       nav_select("scenario_tabs",
-                 selected = current[length(current)],
+                 selected = current$id[nrow(current)],
                  session  = session)
       showNotification(
         sprintf("Tab limit reached (%d scenarios - Greek alphabet exhausted).",
@@ -595,9 +640,8 @@ server <- function(input, output, session) {
       return()
     }
 
-    new_idx   <- length(current) + 1
-    new_id    <- sprintf("scenario_%02d", new_idx)
-    new_label <- GREEK_LETTERS[new_idx]
+    new_id    <- next_scenario_id()
+    new_label <- available_letters[1]
 
     # Insert the new scenario tab BEFORE the "+" tab.
     nav_insert(
@@ -613,10 +657,13 @@ server <- function(input, output, session) {
     )
 
     # Boot up the new scenario's server logic.
-    scenarioServer(new_id, letter = new_label)
+    mount_scenario(new_id, new_label)
 
     # Track it in our reactive list.
-    scenarios(c(current, new_id))
+    scenarios(rbind(
+      current,
+      data.frame(id = new_id, letter = new_label, stringsAsFactors = FALSE)
+    ))
 
     # Switch the user to the brand-new tab (don't leave them on "+").
     nav_select("scenario_tabs", selected = new_id, session = session)
