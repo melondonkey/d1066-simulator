@@ -482,6 +482,9 @@ ui <- function(request) page_fluid(
         .bslib-sidebar-layout {
           --_sidebar-width: 88vw !important;
         }
+        .app-title-bar { padding: 6px 10px; }
+        .app-title-text { font-size: 0.95rem !important; }
+        .app-title-icon { font-size: 1.1rem !important; }
       }
     ")),
     tags$script(HTML("
@@ -514,9 +517,12 @@ ui <- function(request) page_fluid(
 
   # Title bar above the tab strip
   div(
-    style = "display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid #3a3f44;",
-    span(style = "font-size: 1.6rem;", "\u2694\uFE0F"),
-    span(style = "font-size: 1.25rem; font-weight: 600;", "d1066 Battle Simulator")
+    class = "app-title-bar",
+    style = "display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-bottom: 1px solid #3a3f44;",
+    span(class = "app-title-icon", style = "font-size: 1.4rem;", "\u2694\uFE0F"),
+    span(class = "app-title-text",
+         style = "font-size: 1.15rem; font-weight: 600;",
+         "d1066 Battle Simulator")
   ),
 
   # The scenario tab strip — content rendered server-side via insertTab/removeTab.
