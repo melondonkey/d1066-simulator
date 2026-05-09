@@ -94,7 +94,8 @@ scenarioUI <- function(id) {
           card_body(
             class = "pt-2 pb-1",
             layout_columns(
-              col_widths = c(4, 4, 4),
+              col_widths = breakpoints(sm = c(4, 4, 4),
+                                        xs = c(12, 12, 12)),
               unit_input(ns("atk_d6"),  "d6",  2),
               unit_input(ns("atk_d12"), "d12", 2),
               unit_input(ns("atk_d20"), "d20", 2)
@@ -111,7 +112,8 @@ scenarioUI <- function(id) {
             numericInput(ns("def_castle"), "\uD83C\uDFF0 Castles",
                          value = 0, min = 0, step = 1),
             layout_columns(
-              col_widths = c(4, 4, 4),
+              col_widths = breakpoints(sm = c(4, 4, 4),
+                                        xs = c(12, 12, 12)),
               unit_input(ns("def_d6"),  "d6",  2),
               unit_input(ns("def_d12"), "d12", 2),
               unit_input(ns("def_d20"), "d20", 2)
@@ -127,13 +129,14 @@ scenarioUI <- function(id) {
 
       # Main panel
       layout_columns(
-        col_widths = c(5, 7),
+        col_widths = breakpoints(md = c(5, 7), xs = c(12, 12)),
         card(
           card_header("Attacker Win Probability"),
           card_body(plotlyOutput(ns("win_gauge"), height = "250px"))
         ),
         layout_columns(
-          col_widths = c(4, 4, 4),
+          col_widths = breakpoints(sm = c(4, 4, 4),
+                                    xs = c(12, 12, 12)),
           value_box(
             title    = "Attacker Win %",
             value    = textOutput(ns("atk_pct"), inline = TRUE),
@@ -156,7 +159,7 @@ scenarioUI <- function(id) {
       ),
 
       layout_columns(
-        col_widths = c(5, 7),
+        col_widths = breakpoints(md = c(5, 7), xs = c(12, 12)),
         card(
           card_header("Outcome Distribution"),
           card_body(plotOutput(ns("dist_plot"), height = "400px"))
@@ -167,7 +170,7 @@ scenarioUI <- function(id) {
             p(class = "text-muted small",
               "Win-rate change from adding +1 of each unit type to the current setup."),
             layout_columns(
-              col_widths = c(6, 6),
+              col_widths = breakpoints(md = c(6, 6), xs = c(12, 12)),
               card(
                 card_header(class = "bg-danger text-white",
                             "\u2694\uFE0F Attacker +1"),
@@ -474,6 +477,11 @@ ui <- function(request) page_fluid(
         color: #2ecc71;
         font-weight: 700;
         font-size: 1.25rem;
+      }
+      @media (max-width: 575.98px) {
+        .bslib-sidebar-layout {
+          --_sidebar-width: 88vw !important;
+        }
       }
     ")),
     tags$script(HTML("
