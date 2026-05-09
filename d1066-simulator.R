@@ -435,23 +435,16 @@ unit_input <- function(id, label, value, icon_text = NULL) {
 
 # ── UI ───────────────────────────────────────────────────────────────────
 
-ui <- function(request) page_sidebar(
+ui <- function(request) page_fluid(
   theme = app_theme,
-  title = div(
-    style = "display: flex; align-items: center; gap: 10px;",
-    span(style = "font-size: 1.6rem;", "\u2694\uFE0F"),
-    span("d1066 Battle Simulator")
-  ),
+  title = "d1066 Battle Simulator",
 
-  # ── Keep-alive heartbeat + custom disconnect overlay ──
+  # Heartbeat + custom disconnect overlay (unchanged)
   tags$head(
     tags$script(HTML("
-      // Send a heartbeat every 30s to prevent idle timeout
       setInterval(function() {
         Shiny.setInputValue('heartbeat', new Date().getTime());
       }, 30000);
-
-      // Replace the default grey disconnect screen with a friendly reload banner
       $(document).on('shiny:disconnected', function() {
         $('#shiny-disconnected-overlay').remove();
         if (!$('#custom-reconnect').length) {
@@ -468,115 +461,25 @@ ui <- function(request) page_sidebar(
     "))
   ),
 
-  sidebar = sidebar(
-    width = 320,
-    title = "Battle Setup",
-
-    # ── Attacker inputs ──
-    card(
-      card_header(
-        class = "bg-danger text-white",
-        span("\u2694\uFE0F Attackers")
-      ),
-      card_body(
-        class = "pt-2 pb-1",
-        layout_columns(
-          col_widths = c(4, 4, 4),
-          unit_input("atk_d6",  "d6",  2),
-          unit_input("atk_d12", "d12", 2),
-          unit_input("atk_d20", "d20", 2)
-        )
-      )
-    ),
-
-    # ── Defender inputs ──
-    card(
-      card_header(
-        class = "bg-primary text-white",
-        span("\uD83D\uDEE1\uFE0F Defenders")
-      ),
-      card_body(
-        class = "pt-2 pb-1",
-        numericInput("def_castle", "\uD83C\uDFF0 Castles", value = 0, min = 0, step = 1),
-        layout_columns(
-          col_widths = c(4, 4, 4),
-          unit_input("def_d6",  "d6",  2),
-          unit_input("def_d12", "d12", 2),
-          unit_input("def_d20", "d20", 2)
-        )
-      )
-    ),
-
-    # ── Simulation controls ──
-    numericInput("sims", "Simulations", value = 1000, min = 1, step = 100),
-    actionButton("run", "\u25B6 Run Simulation",
-                 class = "btn-success btn-lg w-100 mt-2")
+  # Title bar above the tab strip
+  div(
+    style = "display: flex; align-items: center; gap: 10px; padding: 10px 16px; border-bottom: 1px solid #3a3f44;",
+    span(style = "font-size: 1.6rem;", "\u2694\uFE0F"),
+    span(style = "font-size: 1.25rem; font-weight: 600;", "d1066 Battle Simulator")
   ),
 
-  # ── Main panel ──────────────────────────────────────────────────────
-
-  # Gauge + summary cards row
-  layout_columns(
-    col_widths = c(5, 7),
-    card(
-      card_header("Attacker Win Probability"),
-      card_body(
-        plotlyOutput("win_gauge", height = "250px")
-      )
+  # The scenario tab strip — content rendered server-side via insertTab/removeTab.
+  # Start with one tab (Α) and the trailing "+" tab.
+  navset_tab(
+    id = "scenario_tabs",
+    nav_panel(
+      title = GREEK_LETTERS[1],
+      value = "scenario_alpha",
+      scenarioUI("scenario_alpha")
     ),
-    layout_columns(
-      col_widths = c(4, 4, 4),
-      value_box(
-        title    = "Attacker Win %",
-        value    = textOutput("atk_pct", inline = TRUE),
-        showcase = span(style = "font-size: 2.5rem;", "\u2694\uFE0F"),
-        theme    = "danger"
-      ),
-      value_box(
-        title    = "Defender Win %",
-        value    = textOutput("def_pct", inline = TRUE),
-        showcase = span(style = "font-size: 2.5rem;", "\uD83D\uDEE1\uFE0F"),
-        theme    = "primary"
-      ),
-      value_box(
-        title    = "Simulations Run",
-        value    = textOutput("n_sims_display", inline = TRUE),
-        showcase = span(style = "font-size: 2.5rem;", "\uD83C\uDFB2"),
-        theme    = "secondary"
-      )
-    )
-  ),
-
-  # Chart + Table
-  layout_columns(
-    col_widths = c(5, 7),
-    card(
-      card_header("Outcome Distribution"),
-      card_body(plotOutput("dist_plot", height = "400px"))
-    ),
-    card(
-      card_header("Marginal Unit Value"),
-      card_body(
-        p(class = "text-muted small",
-          "Win-rate change from adding +1 of each unit type to the current setup."),
-        layout_columns(
-          col_widths = c(6, 6),
-          card(
-            card_header(class = "bg-danger text-white", "\u2694\uFE0F Attacker +1"),
-            card_body(
-              uiOutput("atk_marginal")
-            )
-          ),
-          card(
-            card_header(class = "bg-primary text-white", "\uD83D\uDEE1\uFE0F Defender +1"),
-            card_body(
-              uiOutput("def_marginal")
-            )
-          )
-        ),
-        hr(),
-        uiOutput("recommendation")
-      )
+    nav_panel(
+      title = "\u002B",
+      value = "__add_tab__"
     )
   )
 )
