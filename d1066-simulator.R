@@ -16,6 +16,16 @@ library(dplyr)
 library(ggplot2)
 library(plotly)
 
+# ── Greek alphabet (capitals) used as scenario tab labels ─────────────────
+# Cap the number of scenarios to length(GREEK_LETTERS) = 24.
+GREEK_LETTERS <- c(
+  "\u0391", "\u0392", "\u0393", "\u0394", "\u0395", "\u0396",  # Α Β Γ Δ Ε Ζ
+  "\u0397", "\u0398", "\u0399", "\u039A", "\u039B", "\u039C",  # Η Θ Ι Κ Λ Μ
+  "\u039D", "\u039E", "\u039F", "\u03A0", "\u03A1", "\u03A3",  # Ν Ξ Ο Π Ρ Σ
+  "\u03A4", "\u03A5", "\u03A6", "\u03A7", "\u03A8", "\u03A9"   # Τ Υ Φ Χ Ψ Ω
+)
+MAX_SCENARIOS <- length(GREEK_LETTERS)  # = 24
+
 # ── Simulation helpers ───────────────────────────────────────────────────
 
 reduce_units <- function(units, amount) {
