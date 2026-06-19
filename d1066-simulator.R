@@ -56,6 +56,10 @@ battle_over <- function(units) {
   sum(units[1:3]) == 0 || sum(units[4:7]) == 0
 }
 
+# Server-side validation is the single source of truth for numeric input.
+# Browser numeric inputs may allow scientific notation (e.g. "7e6"), and
+# JS key filters would not cover pasted, restored, bookmarked, or query-string
+# values. Keep this strict guard at the server consumption point.
 safe_int <- function(val, default = 0L, min_val = 0L) {
   # Valid only for plain whole-number decimal strings: "3" yes, "3.9"/"1e3"/"100`" no.
   if (is.null(val) || length(val) != 1L) return(list(value = default, valid = FALSE))
@@ -227,10 +231,12 @@ scenarioServer <- function(id, letter = NULL) {
       init_units <- c(atk_d6$value, atk_d12$value, atk_d20$value,
                       def_castle$value, def_d6$value, def_d12$value, def_d20$value)
       run_simulations(init_units, sims$value)
-    }) %>% bindCache(input$atk_d6, input$atk_d12, input$atk_d20,
-                     input$def_castle, input$def_d6,
-                     input$def_d12, input$def_d20,
-                     input$sims)
+    }) %>%
+      bindCache(input$atk_d6, input$atk_d12, input$atk_d20,
+                input$def_castle, input$def_d6,
+                input$def_d12, input$def_d20,
+                input$sims) %>%
+      bindEvent(input$run, ignoreNULL = FALSE)
 
     # ── Win probability gauge ──
     output$win_gauge <- renderPlotly({
@@ -356,10 +362,12 @@ scenarioServer <- function(id, letter = NULL) {
       def_eff <- def_raw / unit_cost[names(def_raw)]
       list(base = base, atk = atk_raw, def = def_raw,
            atk_eff = atk_eff, def_eff = def_eff)
-    }) %>% bindCache(input$atk_d6, input$atk_d12, input$atk_d20,
-                     input$def_castle, input$def_d6,
-                     input$def_d12, input$def_d20,
-                     input$sims)
+    }) %>%
+      bindCache(input$atk_d6, input$atk_d12, input$atk_d20,
+                input$def_castle, input$def_d6,
+                input$def_d12, input$def_d20,
+                input$sims) %>%
+      bindEvent(input$run, ignoreNULL = FALSE)
 
     marginal_badge <- function(label, delta, efficiency, cost, color) {
       sign_char <- ifelse(delta >= 0, "+", "")
