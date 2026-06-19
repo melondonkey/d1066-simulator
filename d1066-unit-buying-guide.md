@@ -1,14 +1,14 @@
 # d1066 Unit Buying Guide — Rules of Thumb
 
-Based on a systematic sweep of 2,000 simulations across hundreds of army compositions and budget levels.
+Based on a systematic sweep across hundreds of army compositions and budget levels, with thousands of simulated battles per composition (see the note at the end for methodology).
 
 **Unit costs:** d6 = 1, d12 = 2, d20 = 2
 
 ---
 
-## The Big Finding: d6 Is Almost Always the Best Buy Per Cost
+## The Big Finding: d6 Is Usually the Best Buy Per Cost
 
-Across virtually every scenario tested, **+1 d6 delivers the highest win-rate improvement per cost spent.** This held true for both attackers and defenders, at every army size, against every opponent composition.
+Across most scenarios tested, **+1 d6 delivers the highest win-rate improvement per cost spent.** The broad pattern held for both attackers and defenders, though d20 can overtake it in some high-pressure cases: when you are badly outnumbered, when attacking defended fortresses, or in some larger-army comparisons where the difference is close enough to treat as matchup-dependent.
 
 Typical marginal values per cost:
 
@@ -18,7 +18,7 @@ Typical marginal values per cost:
 | Medium armies (4v4) | ~22% | ~18% | ~21% |
 | Large armies (8v8) | ~17% | ~21% | ~23% |
 
-**The d6 advantage comes from unit count.** Two d6s cost the same as one d12 or one d20, and having two bodies rolling two dice (each with a 1/6 hit chance) generates more expected kills than one die with better odds. More importantly, two units absorb two hits before dying, while one d12/d20 absorbs only one.
+**The d6 advantage comes from unit count, not raw firepower.** Two d6s cost the same as one d12 or one d20. On *expected kills per round*, the single bigger die actually wins: two d6 average 2 × 1/6 ≈ 0.33 kills, versus 7/12 ≈ 0.58 for a d12 and 3/4 = 0.75 for a d20. The d6 edge comes from **survivability**: two bodies absorb two hits before dying, while one d12/d20 absorbs only one. Under the simulator's lowest-die-first attacker casualty policy, that extra body keeps rolling in many multi-round fights — so two d6 often out-trade one bigger die across the whole fight even though they lose the single-round expected-kill comparison.
 
 ---
 
@@ -36,7 +36,7 @@ Castles absorb hits before other defender units do, making battles last longer. 
 
 ## d12: The Forgotten Middle Child
 
-d12 almost never wins the efficiency contest. It costs the same as d20 (2) but has worse hit probability (58% vs 75%). The only advantage d12 has over d20 is the mobility bonus (moves two squares), which is a *strategic* consideration that doesn't show up in the combat simulator. **Buy d12 for mobility, not for combat efficiency.**
+d12 rarely wins the efficiency contest in this sweep. It costs the same as d20 (2) but has worse hit probability (58% vs 75%). The main advantage d12 has over d20 is the mobility bonus (moves two squares), which is a *strategic* consideration that doesn't show up in the combat simulator. **Buy d12 primarily for mobility, not for combat efficiency.**
 
 ---
 
@@ -66,7 +66,7 @@ The sweep found consistent patterns for the best army composition at each budget
 
 3. **All d6 at high budgets.** Once your budget exceeds ~7, go full d6 swarm. The sheer number of dice and hit absorption overwhelms any composition with fewer, stronger units.
 
-4. **Buy d12 only for mobility.** The d12 is never the combat-optimal choice. Its only advantage is moving two squares. If positioning matters, it earns its keep strategically, not statistically.
+4. **Buy d12 mostly for mobility.** The d12 rarely looks combat-optimal in this simulator. Its main advantage is moving two squares. If positioning matters, it earns its keep strategically, not statistically.
 
 5. **Underdogs should buy d20.** If you're outnumbered or facing a castle, d20 becomes more efficient. When you're already losing the numbers game, you need the higher hit probability to have any chance.
 
@@ -74,7 +74,7 @@ The sweep found consistent patterns for the best army composition at each budget
 
 ## Storming the Fortress (5 Castles)
 
-Fortresses completely change the math. With 5 castles acting as a damage sponge, **d20 becomes essential** — the normal "just buy d6" advice doesn't apply here.
+Fortresses completely change the math. With 5 castles acting as a damage sponge in front of a defending garrison, **d20 becomes much more important** — the normal "just buy d6" advice doesn't apply cleanly here.
 
 ### Why Fortresses Flip the Script
 
@@ -97,7 +97,7 @@ Against fortresses, the optimal composition consistently follows a pattern: **ro
 
 ### Fortress Marginal Values
 
-The marginal efficiency numbers confirm the d20's dominance against castles. When your army is smaller than the fortress garrison, d20 wins per cost handily:
+The marginal efficiency numbers show why d20 is so valuable against defended castles. When your army is smaller than the fortress garrison, d20 wins per cost handily:
 
 | Scenario | +1 d6 / cost | +1 d20 / cost | Winner |
 |---|---|---|---|
@@ -114,11 +114,11 @@ But once you already have enough firepower and are winning comfortably (>80% win
 
 ### Fortress Rules of Thumb
 
-1. **Expect to spend 2–3× the garrison's budget.** A fortress with a 4-cost garrison (e.g. 4×d6) needs about budget 6 to crack. A 10-cost garrison needs budget 16+. The 5 castles roughly double the effective defense.
+1. **Expect to spend well above the garrison's budget.** In this sweep, a fortress with a 4-cost garrison (e.g. 4×d6) needed about budget 6 to crack, while a 10-cost garrison needed budget 16+. The 5 castles substantially increase the effective defense.
 
-2. **Always bring d20s to a siege.** Unlike field battles, d20 is the most efficient unit per cost when assaulting fortresses. Plan for roughly half your budget in d20.
+2. **Bring d20s against defended fortresses.** Unlike many field battles, d20 is often the most efficient unit per cost when assaulting a fortress with units behind it. Plan for roughly half your budget in d20.
 
-3. **The composition is d6 + d20, skip d12.** d12 almost never appears in optimal fortress assault compositions. It doesn't hit hard enough for the castle-cracking role and doesn't provide enough bodies for the meat-shield role.
+3. **The composition is usually d6 + d20, with little d12.** d12 rarely appears in optimal fortress assault compositions in this sweep. It doesn't hit hard enough for the castle-cracking role and doesn't provide enough bodies for the meat-shield role.
 
 4. **At very high budgets, d6 swarm takes over again.** Once your budget exceeds ~14–16 against a moderate garrison, the sheer mass of d6 units eventually overwhelms even a fortress. But you need a LOT of them.
 
@@ -128,8 +128,33 @@ But once you already have enough firepower and are winning comfortably (>80% win
 
 ## Defender vs Attacker — Any Difference?
 
-The same rules apply to defenders, with one nuance: **the defender's d6 advantage is even stronger** than the attacker's. In mirror matchups, the defender's marginal d6 consistently outperforms d12/d20 by a wider margin than on the attack side. This is because defenders benefit more from absorbing hits (they're trying to survive, not push through), and extra bodies = extra absorption.
+The same rules mostly apply to defenders, with one nuance: **the defender's d6 advantage often looks even stronger** than the attacker's. In mirror matchups from this sweep, the defender's marginal d6 outperformed d12/d20 by a wider margin than on the attack side. This is because defenders benefit more from absorbing hits (they're trying to survive, not push through), and extra bodies = extra absorption.
 
 ---
 
-*Analysis: 3,000 simulations per data point, ~400+ compositions tested across budgets 1–20 against 16 defender setups including 8 fortress configurations.*
+## Methodology and caveats
+
+*Analysis: ~3,000 simulated battles per data point, ~400+ compositions tested
+across budgets 1–20 against 16 defender setups including 8 fortress
+configurations.*
+
+These are **Monte Carlo estimates**, not exact probabilities. Every win rate and
+marginal value above carries sampling error that shrinks roughly like 1/√N with
+the number of simulations. At ~3,000 runs, sampling error is roughly ±1–2
+percentage points per estimate, but marginal values compare multiple simulated
+rates and can stack those errors — so recommended "winners" in close matchups can
+shift between runs. Consequences to keep in mind:
+
+- **Close calls are noise-sensitive.** Where two units are within a couple of
+  points per cost, the "winner" can flip between sweeps. Treat near-ties as ties.
+- **Hit probabilities are exact, the rest is estimated.** The per-die hit chances
+  (d6 = 1/6 ≈ 17%, d12 = 7/12 ≈ 58%, d20 = 3/4 = 75%) are arithmetic facts of the
+  rules. The optimal-composition tables and marginal values are empirical results
+  of one simulation sweep and have not been independently re-derived here.
+- **Attacker casualty choice is simplified.** The board game lets attackers choose
+  which units take hits. The simulator assumes attacker casualties are assigned
+  from lowest die to highest die, matching the cheap-body strategy but not every
+  possible player choice.
+- **Strategic factors are out of scope.** The sweep models only the dice-resolution
+  step, so mobility, positioning, recruitment, and alliances don't appear in these
+  numbers (this is why d12's mobility edge never shows up).
