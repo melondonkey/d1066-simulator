@@ -56,6 +56,14 @@ battle_over <- function(units) {
   sum(units[1:3]) == 0 || sum(units[4:7]) == 0
 }
 
+safe_int <- function(val, default = 0L, min_val = 0L) {
+  # Valid only for plain whole-number decimal strings: "3" yes, "3.9"/"1e3"/"100`" no.
+  if (is.null(val) || length(val) != 1L) return(list(value = default, valid = FALSE))
+  n <- suppressWarnings(as.integer(val))
+  valid <- !is.na(n) && identical(as.character(n), trimws(as.character(val))) && n >= min_val
+  list(value = if (valid) n else default, valid = valid)
+}
+
 run_simulations <- function(init_units, n_sims = 1000) {
   simulation_results <- replicate(n_sims, {
     state <- init_units
@@ -200,10 +208,25 @@ scenarioServer <- function(id, letter = NULL) {
     })
 
     raw_results <- reactive({
-      init_units <- c(input$atk_d6, input$atk_d12, input$atk_d20,
-                      input$def_castle, input$def_d6,
-                      input$def_d12, input$def_d20)
-      run_simulations(init_units, input$sims)
+      atk_d6     <- safe_int(input$atk_d6)
+      atk_d12    <- safe_int(input$atk_d12)
+      atk_d20    <- safe_int(input$atk_d20)
+      def_castle <- safe_int(input$def_castle)
+      def_d6     <- safe_int(input$def_d6)
+      def_d12    <- safe_int(input$def_d12)
+      def_d20    <- safe_int(input$def_d20)
+      sims       <- safe_int(input$sims, default = 1000L, min_val = 1L)
+
+      all_valid <- all(
+        atk_d6$valid, atk_d12$valid, atk_d20$valid,
+        def_castle$valid, def_d6$valid, def_d12$valid, def_d20$valid,
+        sims$valid
+      )
+      validate(need(all_valid, "Attacker dice, defender castles/dice, and Simulations must be whole numbers. Unit counts must be ≥ 0; Simulations must be ≥ 1."))
+
+      init_units <- c(atk_d6$value, atk_d12$value, atk_d20$value,
+                      def_castle$value, def_d6$value, def_d12$value, def_d20$value)
+      run_simulations(init_units, sims$value)
     }) %>% bindCache(input$atk_d6, input$atk_d12, input$atk_d20,
                      input$def_castle, input$def_d6,
                      input$def_d12, input$def_d20,
