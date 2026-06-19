@@ -61,20 +61,14 @@ assumption (see caveats below).
 A few honest caveats about what "accurate" means:
 
 - **These are estimates, not exact odds.** The app uses Monte Carlo simulation, so
-  each win rate is a sample estimate with sampling error that shrinks roughly like
-  1/√N as you raise the simulation count. More simulations → a tighter estimate,
-  never a guarantee.
+  each result carries sampling error. More simulations → a tighter estimate, never
+  a guarantee.
 - **Distribution, not destiny.** The estimated *probability* can be right while any
   single fight still goes either way — a heavy favorite can lose one battle.
 - **Uniform *and* independent are assumptions.** "Unbiased" covers the per-roll
   distribution; the model also assumes rolls don't influence each other. True
   Roll's rolling-seed design is built to be fair, but the model is only as good as
   that independence assumption holds.
-- **Dice step only.** Board position, recruitment, and alliances are out of scope,
-  so treat the numbers as combat odds, not a prediction of who wins the game.
-- **Attacker casualty choice is simplified.** The board game lets attackers choose
-  which units take hits; this simulator always removes attacker units from lowest
-  die to highest die.
 
 ## Features
 
