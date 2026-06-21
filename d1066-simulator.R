@@ -16,15 +16,12 @@ library(dplyr)
 library(ggplot2)
 library(plotly)
 
-# ── Greek alphabet (capitals) used as scenario tab labels ─────────────────
-# Cap the number of scenarios to length(GREEK_LETTERS) = 24.
-GREEK_LETTERS <- c(
-  "\u0391", "\u0392", "\u0393", "\u0394", "\u0395", "\u0396",  # Α Β Γ Δ Ε Ζ
-  "\u0397", "\u0398", "\u0399", "\u039A", "\u039B", "\u039C",  # Η Θ Ι Κ Λ Μ
-  "\u039D", "\u039E", "\u039F", "\u03A0", "\u03A1", "\u03A3",  # Ν Ξ Ο Π Ρ Σ
-  "\u03A4", "\u03A5", "\u03A6", "\u03A7", "\u03A8", "\u03A9"   # Τ Υ Φ Χ Ψ Ω
+# ── Circled digits used as scenario tab labels ────────────────────────────
+SCENARIO_NUMERALS <- c(
+  "\u2460", "\u2461", "\u2462", "\u2463", "\u2464",
+  "\u2465", "\u2466", "\u2467", "\u2468"
 )
-MAX_SCENARIOS <- length(GREEK_LETTERS)  # = 24
+MAX_SCENARIOS <- length(SCENARIO_NUMERALS)  # = 9
 
 # ── Simulation helpers ───────────────────────────────────────────────────
 
@@ -89,14 +86,13 @@ run_simulations <- function(init_units, n_sims = 1000) {
 
 # ── Scenario module: one self-contained battle scenario ───────────────────
 
-scenarioUI <- function(id, letter = NULL) {
+scenarioUI <- function(id, label = NULL) {
   ns <- NS(id)
   # Sidebar layout per scenario: left = inputs, right = outputs.
   # We use layout_sidebar so each tab has its own sidebar.
   layout_sidebar(
     sidebar = sidebar(
       width = 320,
-      title = "Battle Setup",
 
       # Attacker inputs
       card(
@@ -204,11 +200,11 @@ scenarioUI <- function(id, letter = NULL) {
   )
 }
 
-scenarioServer <- function(id, letter = NULL) {
+scenarioServer <- function(id, label = NULL) {
   moduleServer(id, function(input, output, session) {
 
     output$scenario_letter <- renderText({
-      if (is.null(letter)) "" else letter
+      if (is.null(label)) "" else label
     })
 
     raw_results <- reactive({
@@ -237,6 +233,10 @@ scenarioServer <- function(id, letter = NULL) {
                 input$def_d12, input$def_d20,
                 input$sims) %>%
       bindEvent(input$run, ignoreNULL = FALSE)
+
+    observeEvent(input$run, {
+      session$sendCustomMessage("close_sidebar", list())
+    }, ignoreInit = TRUE)
 
     # ── Win probability gauge ──
     output$win_gauge <- renderPlotly({
@@ -484,12 +484,30 @@ ui <- function(request) page_fluid(
     tags$meta(name = "viewport",
               content = "width=device-width, initial-scale=1, shrink-to-fit=no"),
     tags$style(HTML("
+      :root {
+        --header-height: 89px;
+      }
+
       /* ── Reset: strip page_fluid container padding so we can go edge-to-edge */
-      html, body { overflow-x: hidden; }
+      html, body {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        overflow-x: hidden;
+        overscroll-behavior: none;
+      }
       body > .container-fluid {
+        display: flex;
+        flex-direction: column;
         padding-left: 0 !important;
         padding-right: 0 !important;
         max-width: 100% !important;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
         overflow-x: hidden;
       }
 
@@ -521,13 +539,17 @@ ui <- function(request) page_fluid(
       /* Spacer div pushes content below the fixed header.                      */
       /* JS sets its height to match .app-sticky-header's actual rendered height */
       #header-spacer {
-        height: 89px;   /* title bar ~41px + tab bar 48px; JS will correct this */
+        flex: 0 0 var(--header-height);
+        height: var(--header-height);
       }
 
       /* ── Control bar row ────────────────────────────────────────────────── */
       .scenario-tabs-row {
         display: flex;
         align-items: flex-end;
+        width: 100%;
+        min-width: 0;
+        overflow: hidden;
         padding: 0;
         background: #272b30;
         border-bottom: 2px solid #3a3f44;
@@ -560,11 +582,16 @@ ui <- function(request) page_fluid(
       .tabs-row-btn:focus  { outline: none; color: #fff !important; }
       .tabs-row-btn:focus-visible { outline: 2px solid #85c1e9; outline-offset: -2px; }
       .tabs-row-btn svg { width: 22px; height: 22px; fill: currentColor; display: block; }
+      #global_sidebar_toggle {
+        flex: 0 0 64px;
+        width: 64px;
+      }
 
       /* ── Tab strip wrapper: fills space between buttons ─────────────────── */
       .scenario-tabs-wrapper {
         flex: 1 1 0;
         min-width: 0;
+        max-width: 100%;
         overflow: hidden;      /* clip tab-content inside wrapper; it still       */
         height: 48px;          /* renders in the DOM and Shiny can reach it;      */
       }                        /* only visually clipped inside the fixed header.  */
@@ -592,6 +619,7 @@ ui <- function(request) page_fluid(
         margin: 0;
       }
       #scenario_tabs.nav-tabs > li > a {
+        box-sizing: border-box;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -604,20 +632,21 @@ ui <- function(request) page_fluid(
         border-radius: 6px 6px 0 0;
         border: 1px solid transparent;
         border-bottom: 0 !important;
-        color: #7f8c8d;
+        color: #98a1a8;
         text-decoration: none;
-        transition: color 0.12s, background 0.12s;
+        transition: color 0.12s, background 0.12s, border-color 0.12s;
         -webkit-tap-highlight-color: transparent;
       }
       #scenario_tabs.nav-tabs > li.active > a,
       #scenario_tabs.nav-tabs > li > a.active {
-        color: #ecf0f1;
-        background: #32383e;
-        border-color: #4a5056 #4a5056 #32383e !important;
+        color: #ffffff;
+        background: #6e1423;
+        border-color: #6e1423 #6e1423 #6e1423 !important;
       }
       #scenario_tabs.nav-tabs > li > a:hover:not(.active) {
-        color: #bdc3c7;
-        background: #2c3136;
+        color: #e2e6ea;
+        background: #343a40;
+        border-color: #4a5056 #4a5056 transparent;
       }
       #scenario_tabs.nav-tabs > li > a[data-value='__add_tab__'] {
         color: #2ecc71;
@@ -631,11 +660,21 @@ ui <- function(request) page_fluid(
 
       /* ── tab-content and scenario content: no container framing ─────────── */
       .tab-content {
+        flex: 1 1 auto;
+        min-height: 0;
         border: 0 !important;
         background: transparent !important;
         padding: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
+      }
+      .tab-content.sidebar-open {
+        overflow-y: hidden !important;
       }
       .tab-content > .tab-pane {
+        min-height: 100%;
         border: 0 !important;
         background: transparent !important;
         padding: 0 !important;
@@ -667,12 +706,13 @@ ui <- function(request) page_fluid(
       /* ── Mobile ──────────────────────────────────────────────────────────── */
       @media (max-width: 575.98px) {
         .tabs-row-btn { flex: 0 0 44px; width: 44px; height: 44px; font-size: 1.3rem; }
+        #global_sidebar_toggle { flex: 0 0 56px; width: 56px; }
         .tabs-row-btn svg { width: 20px; height: 20px; }
         .scenario-tabs-wrapper { height: 44px; }
         #scenario_tabs.nav-tabs { height: 44px; }
-        #scenario_tabs.nav-tabs > li > a { height: 38px; min-width: 66px; padding: 0 10px; font-size: 1rem; }
+        #scenario_tabs.nav-tabs > li > a { height: 38px; min-width: 58px; padding: 0 8px; font-size: 1rem; }
+        #scenario_tabs.nav-tabs > li > a[data-value='__add_tab__'] { min-width: 44px; }
         .app-title-bar { padding: 6px 12px; }
-        #header-spacer { height: 85px; }
 
         /* Sidebar on mobile: bslib absolutely-positions the aside panel,
            but the grid row still reserves its height as a gap.
@@ -680,9 +720,25 @@ ui <- function(request) page_fluid(
         .bslib-sidebar-layout {
           --_sidebar-width: 90vw !important;
         }
-        .bslib-sidebar-layout > aside {
+        .bslib-sidebar-layout[data-collapsible-mobile='true'] > aside {
+          height: calc(100dvh - var(--header-height)) !important;
+          max-height: calc(100dvh - var(--header-height)) !important;
           overflow-y: auto !important;
-          max-height: calc(100dvh - 85px) !important;
+          overflow-x: hidden !important;
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior: contain;
+        }
+        .bslib-sidebar-layout[data-collapsible-mobile='true'] > aside > .sidebar-content {
+          height: auto !important;
+          max-height: none !important;
+          overflow: visible !important;
+          padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+        }
+        .bslib-sidebar-layout[data-collapsible-mobile='true'] > aside .card,
+        .bslib-sidebar-layout[data-collapsible-mobile='true'] > aside .card-body,
+        .bslib-sidebar-layout[data-collapsible-mobile='true'] > aside .sidebar-content {
+          max-height: none !important;
+          overflow: visible !important;
         }
         /* When sidebar is OPEN on mobile the aside is position:absolute (out of
            flow), so the grid cell it occupied becomes a phantom gap. Span .main
@@ -698,6 +754,18 @@ ui <- function(request) page_fluid(
       // Move tab-content out of the clipped fixed header into normal document
       // flow so it scrolls freely below the fixed bar.
       // Runs after Shiny is fully initialised (safe on mobile browsers).
+      function syncSidebarScrollState() {
+        var tabContent = document.querySelector('.tab-content');
+        if (!tabContent) return;
+        var isMobile = window.matchMedia('(max-width: 575.98px)').matches;
+        var activeLayout = document.querySelector(
+          '.tab-content > .tab-pane.active .bslib-sidebar-layout[data-collapsible-mobile=\"true\"]'
+        );
+        var sidebarOpen = isMobile && activeLayout &&
+          !activeLayout.classList.contains('sidebar-collapsed');
+        tabContent.classList.toggle('sidebar-open', !!sidebarOpen);
+      }
+
       function hoistTabContent() {
         var spacer     = document.getElementById('header-spacer');
         var header     = document.querySelector('.app-sticky-header');
@@ -708,13 +776,27 @@ ui <- function(request) page_fluid(
         }
         // Always sync spacer height to actual fixed header height
         if (header && spacer) {
-          spacer.style.height = header.offsetHeight + 'px';
+          var headerHeight = header.offsetHeight + 'px';
+          document.documentElement.style.setProperty('--header-height', headerHeight);
+          spacer.style.height = headerHeight;
         }
+        syncSidebarScrollState();
       }
       // Fire immediately, on Shiny ready, and on resize
       document.addEventListener('DOMContentLoaded', hoistTabContent);
       $(document).on('shiny:sessioninitialized', hoistTabContent);
       window.addEventListener('resize', hoistTabContent);
+      document.addEventListener('bslib.sidebar', syncSidebarScrollState, true);
+      document.addEventListener('shown.bs.tab', syncSidebarScrollState, true);
+
+      Shiny.addCustomMessageHandler('close_sidebar', function(_) {
+        var activePane = document.querySelector('.tab-content > .tab-pane.active');
+        if (!activePane) return;
+        var activeLayout = activePane.querySelector('.bslib-sidebar-layout');
+        if (!activeLayout || activeLayout.classList.contains('sidebar-collapsed')) return;
+        var toggle = activeLayout.querySelector('.collapse-toggle');
+        if (toggle) toggle.click();
+      });
 
       Shiny.addCustomMessageHandler('scroll_active_tab', function(_) {
         setTimeout(function() {
@@ -722,6 +804,7 @@ ui <- function(request) page_fluid(
           if (el && el.scrollIntoView) {
             el.scrollIntoView({behavior: 'smooth', inline: 'center', block: 'nearest'});
           }
+          syncSidebarScrollState();
         }, 50);
       });
       // Global sidebar toggle: forward clicks to the active tab's hidden bslib toggle
@@ -783,9 +866,9 @@ ui <- function(request) page_fluid(
         navset_tab(
           id = "scenario_tabs",
           nav_panel(
-            title = GREEK_LETTERS[1],
+            title = SCENARIO_NUMERALS[1],
             value = "scenario_alpha",
-            scenarioUI("scenario_alpha", letter = GREEK_LETTERS[1])
+            scenarioUI("scenario_alpha", label = SCENARIO_NUMERALS[1])
           ),
           nav_panel(
             title = "+",
@@ -813,10 +896,10 @@ server <- function(input, output, session) {
 
   session$allowReconnect("force")
 
-  # ── Track currently-open scenarios (stable internal id + display letter) ──
+  # ── Track currently-open scenarios (stable internal id + display label) ──
   # We always keep the original alpha scenario (started in UI).
   scenarios <- reactiveVal(
-    data.frame(id = "scenario_alpha", letter = GREEK_LETTERS[1],
+    data.frame(id = "scenario_alpha", label = SCENARIO_NUMERALS[1],
                stringsAsFactors = FALSE)
   )
   next_scenario_seq <- reactiveVal(1L)
@@ -827,12 +910,12 @@ server <- function(input, output, session) {
     sprintf("scenario_%04d", next_seq)
   }
 
-  mount_scenario <- function(id, letter) {
-    scenarioServer(id, letter = letter)
+  mount_scenario <- function(id, label) {
+    scenarioServer(id, label = label)
   }
 
   # Boot up the alpha scenario's server logic.
-  mount_scenario("scenario_alpha", GREEK_LETTERS[1])
+  mount_scenario("scenario_alpha", SCENARIO_NUMERALS[1])
 
   # Global close: removes whichever scenario is currently active.
   observeEvent(input$global_close_scenario, {
@@ -859,16 +942,15 @@ server <- function(input, output, session) {
     if (!identical(input$scenario_tabs, "__add_tab__")) return()
 
     current <- scenarios()
-    available_letters <- base::setdiff(GREEK_LETTERS, current$letter)
-    if (length(available_letters) == 0) {
+    available_labels <- base::setdiff(SCENARIO_NUMERALS, current$label)
+    if (length(available_labels) == 0) {
       # Bounce the user off the "+" tab back to the last real scenario,
       # and tell them why nothing happened.
       nav_select("scenario_tabs",
                  selected = current$id[nrow(current)],
                  session  = session)
       showNotification(
-        sprintf("Tab limit reached (%d scenarios - Greek alphabet exhausted).",
-                MAX_SCENARIOS),
+        sprintf("Tab limit reached (%d scenarios).", MAX_SCENARIOS),
         type = "warning",
         duration = 4
       )
@@ -876,7 +958,7 @@ server <- function(input, output, session) {
     }
 
     new_id    <- next_scenario_id()
-    new_label <- available_letters[1]
+    new_label <- available_labels[1]
 
     # Insert the new scenario tab BEFORE the "+" tab.
     nav_insert(
@@ -886,7 +968,7 @@ server <- function(input, output, session) {
       nav      = nav_panel(
         title = new_label,
         value = new_id,
-        scenarioUI(new_id, letter = new_label)
+        scenarioUI(new_id, label = new_label)
       ),
       session  = session
     )
@@ -897,7 +979,7 @@ server <- function(input, output, session) {
     # Track it in our reactive list.
     scenarios(rbind(
       current,
-      data.frame(id = new_id, letter = new_label, stringsAsFactors = FALSE)
+      data.frame(id = new_id, label = new_label, stringsAsFactors = FALSE)
     ))
 
     # Switch the user to the brand-new tab (don't leave them on "+").
