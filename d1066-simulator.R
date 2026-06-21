@@ -481,12 +481,30 @@ ui <- function(request) page_fluid(
     tags$meta(name = "viewport",
               content = "width=device-width, initial-scale=1, shrink-to-fit=no"),
     tags$style(HTML("
+      :root {
+        --header-height: 89px;
+      }
+
       /* ── Reset: strip page_fluid container padding so we can go edge-to-edge */
-      html, body { overflow-x: hidden; }
+      html, body {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        overflow-x: hidden;
+        overscroll-behavior: none;
+      }
       body > .container-fluid {
+        display: flex;
+        flex-direction: column;
         padding-left: 0 !important;
         padding-right: 0 !important;
         max-width: 100% !important;
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
         overflow-x: hidden;
       }
 
@@ -518,7 +536,8 @@ ui <- function(request) page_fluid(
       /* Spacer div pushes content below the fixed header.                      */
       /* JS sets its height to match .app-sticky-header's actual rendered height */
       #header-spacer {
-        height: 89px;   /* title bar ~41px + tab bar 48px; JS will correct this */
+        flex: 0 0 var(--header-height);
+        height: var(--header-height);
       }
 
       /* ── Control bar row ────────────────────────────────────────────────── */
@@ -629,11 +648,18 @@ ui <- function(request) page_fluid(
 
       /* ── tab-content and scenario content: no container framing ─────────── */
       .tab-content {
+        flex: 1 1 auto;
+        min-height: 0;
         border: 0 !important;
         background: transparent !important;
         padding: 0 !important;
+        overflow-y: auto !important;
+        overflow-x: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior: contain;
       }
       .tab-content > .tab-pane {
+        min-height: 100%;
         border: 0 !important;
         background: transparent !important;
         padding: 0 !important;
@@ -670,7 +696,6 @@ ui <- function(request) page_fluid(
         #scenario_tabs.nav-tabs { height: 44px; }
         #scenario_tabs.nav-tabs > li > a { height: 38px; min-width: 66px; padding: 0 10px; font-size: 1rem; }
         .app-title-bar { padding: 6px 12px; }
-        #header-spacer { height: 85px; }
 
         /* Sidebar on mobile: bslib absolutely-positions the aside panel,
            but the grid row still reserves its height as a gap.
@@ -680,7 +705,7 @@ ui <- function(request) page_fluid(
         }
         .bslib-sidebar-layout > aside {
           overflow-y: auto !important;
-          max-height: calc(100dvh - 85px) !important;
+          max-height: calc(100dvh - var(--header-height)) !important;
         }
         /* When sidebar is OPEN on mobile the aside is position:absolute (out of
            flow), so the grid cell it occupied becomes a phantom gap. Span .main
@@ -706,7 +731,9 @@ ui <- function(request) page_fluid(
         }
         // Always sync spacer height to actual fixed header height
         if (header && spacer) {
-          spacer.style.height = header.offsetHeight + 'px';
+          var headerHeight = header.offsetHeight + 'px';
+          document.documentElement.style.setProperty('--header-height', headerHeight);
+          spacer.style.height = headerHeight;
         }
       }
       // Fire immediately, on Shiny ready, and on resize
