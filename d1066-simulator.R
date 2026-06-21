@@ -93,7 +93,6 @@ scenarioUI <- function(id, label = NULL) {
   layout_sidebar(
     sidebar = sidebar(
       width = 320,
-      title = "Battle Setup",
 
       # Attacker inputs
       card(
@@ -234,6 +233,10 @@ scenarioServer <- function(id, label = NULL) {
                 input$def_d12, input$def_d20,
                 input$sims) %>%
       bindEvent(input$run, ignoreNULL = FALSE)
+
+    observeEvent(input$run, {
+      session$sendCustomMessage("close_sidebar", list())
+    }, ignoreInit = TRUE)
 
     # ── Win probability gauge ──
     output$win_gauge <- renderPlotly({
@@ -544,6 +547,9 @@ ui <- function(request) page_fluid(
       .scenario-tabs-row {
         display: flex;
         align-items: flex-end;
+        width: 100%;
+        min-width: 0;
+        overflow: hidden;
         padding: 0;
         background: #272b30;
         border-bottom: 2px solid #3a3f44;
@@ -576,11 +582,16 @@ ui <- function(request) page_fluid(
       .tabs-row-btn:focus  { outline: none; color: #fff !important; }
       .tabs-row-btn:focus-visible { outline: 2px solid #85c1e9; outline-offset: -2px; }
       .tabs-row-btn svg { width: 22px; height: 22px; fill: currentColor; display: block; }
+      #global_sidebar_toggle {
+        flex: 0 0 64px;
+        width: 64px;
+      }
 
       /* ── Tab strip wrapper: fills space between buttons ─────────────────── */
       .scenario-tabs-wrapper {
         flex: 1 1 0;
         min-width: 0;
+        max-width: 100%;
         overflow: hidden;      /* clip tab-content inside wrapper; it still       */
         height: 48px;          /* renders in the DOM and Shiny can reach it;      */
       }                        /* only visually clipped inside the fixed header.  */
@@ -608,6 +619,7 @@ ui <- function(request) page_fluid(
         margin: 0;
       }
       #scenario_tabs.nav-tabs > li > a {
+        box-sizing: border-box;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -658,6 +670,9 @@ ui <- function(request) page_fluid(
         -webkit-overflow-scrolling: touch;
         overscroll-behavior: contain;
       }
+      .tab-content.sidebar-open {
+        overflow-y: hidden !important;
+      }
       .tab-content > .tab-pane {
         min-height: 100%;
         border: 0 !important;
@@ -691,10 +706,12 @@ ui <- function(request) page_fluid(
       /* ── Mobile ──────────────────────────────────────────────────────────── */
       @media (max-width: 575.98px) {
         .tabs-row-btn { flex: 0 0 44px; width: 44px; height: 44px; font-size: 1.3rem; }
+        #global_sidebar_toggle { flex: 0 0 56px; width: 56px; }
         .tabs-row-btn svg { width: 20px; height: 20px; }
         .scenario-tabs-wrapper { height: 44px; }
         #scenario_tabs.nav-tabs { height: 44px; }
-        #scenario_tabs.nav-tabs > li > a { height: 38px; min-width: 66px; padding: 0 10px; font-size: 1rem; }
+        #scenario_tabs.nav-tabs > li > a { height: 38px; min-width: 58px; padding: 0 8px; font-size: 1rem; }
+        #scenario_tabs.nav-tabs > li > a[data-value='__add_tab__'] { min-width: 44px; }
         .app-title-bar { padding: 6px 12px; }
 
         /* Sidebar on mobile: bslib absolutely-positions the aside panel,
@@ -703,9 +720,25 @@ ui <- function(request) page_fluid(
         .bslib-sidebar-layout {
           --_sidebar-width: 90vw !important;
         }
-        .bslib-sidebar-layout > aside {
-          overflow-y: auto !important;
+        .bslib-sidebar-layout[data-collapsible-mobile='true'] > aside {
+          height: calc(100dvh - var(--header-height)) !important;
           max-height: calc(100dvh - var(--header-height)) !important;
+          overflow-y: auto !important;
+          overflow-x: hidden !important;
+          -webkit-overflow-scrolling: touch;
+          overscroll-behavior: contain;
+        }
+        .bslib-sidebar-layout[data-collapsible-mobile='true'] > aside > .sidebar-content {
+          height: auto !important;
+          max-height: none !important;
+          overflow: visible !important;
+          padding-bottom: calc(1rem + env(safe-area-inset-bottom));
+        }
+        .bslib-sidebar-layout[data-collapsible-mobile='true'] > aside .card,
+        .bslib-sidebar-layout[data-collapsible-mobile='true'] > aside .card-body,
+        .bslib-sidebar-layout[data-collapsible-mobile='true'] > aside .sidebar-content {
+          max-height: none !important;
+          overflow: visible !important;
         }
         /* When sidebar is OPEN on mobile the aside is position:absolute (out of
            flow), so the grid cell it occupied becomes a phantom gap. Span .main
@@ -721,6 +754,18 @@ ui <- function(request) page_fluid(
       // Move tab-content out of the clipped fixed header into normal document
       // flow so it scrolls freely below the fixed bar.
       // Runs after Shiny is fully initialised (safe on mobile browsers).
+      function syncSidebarScrollState() {
+        var tabContent = document.querySelector('.tab-content');
+        if (!tabContent) return;
+        var isMobile = window.matchMedia('(max-width: 575.98px)').matches;
+        var activeLayout = document.querySelector(
+          '.tab-content > .tab-pane.active .bslib-sidebar-layout[data-collapsible-mobile=\"true\"]'
+        );
+        var sidebarOpen = isMobile && activeLayout &&
+          !activeLayout.classList.contains('sidebar-collapsed');
+        tabContent.classList.toggle('sidebar-open', !!sidebarOpen);
+      }
+
       function hoistTabContent() {
         var spacer     = document.getElementById('header-spacer');
         var header     = document.querySelector('.app-sticky-header');
@@ -735,11 +780,23 @@ ui <- function(request) page_fluid(
           document.documentElement.style.setProperty('--header-height', headerHeight);
           spacer.style.height = headerHeight;
         }
+        syncSidebarScrollState();
       }
       // Fire immediately, on Shiny ready, and on resize
       document.addEventListener('DOMContentLoaded', hoistTabContent);
       $(document).on('shiny:sessioninitialized', hoistTabContent);
       window.addEventListener('resize', hoistTabContent);
+      document.addEventListener('bslib.sidebar', syncSidebarScrollState, true);
+      document.addEventListener('shown.bs.tab', syncSidebarScrollState, true);
+
+      Shiny.addCustomMessageHandler('close_sidebar', function(_) {
+        var activePane = document.querySelector('.tab-content > .tab-pane.active');
+        if (!activePane) return;
+        var activeLayout = activePane.querySelector('.bslib-sidebar-layout');
+        if (!activeLayout || activeLayout.classList.contains('sidebar-collapsed')) return;
+        var toggle = activeLayout.querySelector('.collapse-toggle');
+        if (toggle) toggle.click();
+      });
 
       Shiny.addCustomMessageHandler('scroll_active_tab', function(_) {
         setTimeout(function() {
@@ -747,6 +804,7 @@ ui <- function(request) page_fluid(
           if (el && el.scrollIntoView) {
             el.scrollIntoView({behavior: 'smooth', inline: 'center', block: 'nearest'});
           }
+          syncSidebarScrollState();
         }, 50);
       });
       // Global sidebar toggle: forward clicks to the active tab's hidden bslib toggle
