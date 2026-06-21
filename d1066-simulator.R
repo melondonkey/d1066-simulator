@@ -121,7 +121,8 @@ scenarioUI <- function(id, label = NULL) {
 
     div(class = "content-section probability-section",
       section_label("WIN PROBABILITY"),
-      plotlyOutput(ns("win_gauge"), height = "220px"),
+      div(class = "gauge-wrap",
+          plotlyOutput(ns("win_gauge"), height = "100%")),
       uiOutput(ns("win_matchup")),
       div(class = "sr-only", role = "status", `aria-live` = "polite",
           textOutput(ns("win_summary")))
@@ -228,7 +229,7 @@ scenarioServer <- function(id, label = NULL) {
                plot_bgcolor  = "rgba(0,0,0,0)",
                margin = list(t = 40, b = 20, l = 30, r = 30),
                font = list(color = "#c8cdc9")) %>%
-        config(displayModeBar = FALSE)
+        config(displayModeBar = FALSE, responsive = TRUE)
     })
 
     # ── Comparative matchup readout (pairs with the gauge) ──
@@ -505,7 +506,7 @@ ui <- function(request) page_fluid(
   # Heartbeat + custom disconnect overlay (unchanged)
   tags$head(
     tags$meta(name = "viewport",
-              content = "width=device-width, initial-scale=1, shrink-to-fit=no"),
+              content = "width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"),
     tags$style(HTML("
       :root {
         --header-height: 89px;
@@ -535,12 +536,12 @@ ui <- function(request) page_fluid(
       }
 
       /* ── Reset: strip page_fluid container padding so we can go edge-to-edge */
+      /* Dynamic viewport-height shell: sizes to the *visible* viewport so mobile
+         browser chrome / the on-screen keyboard can't clip content (the old
+         position:fixed full-page pin did). overscroll-behavior:none is kept to
+         preserve the earlier scroll-wobble fix. */
       html, body {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+        min-height: 100%;
         overflow: hidden;
         overflow-x: hidden;
         overscroll-behavior: none;
@@ -552,9 +553,13 @@ ui <- function(request) page_fluid(
         padding-right: 0 !important;
         max-width: 100% !important;
         width: 100%;
-        height: 100%;
+        height: 100dvh;
+        min-height: 0;   /* allow the flex children to own scrolling */
         overflow: hidden;
         overflow-x: hidden;
+      }
+      @supports not (height: 100dvh) {
+        body > .container-fluid { height: 100vh; }
       }
 
       /* ── Title bar ──────────────────────────────────────────────────────── */
@@ -564,6 +569,10 @@ ui <- function(request) page_fluid(
         align-items: center;
         gap: 10px;
         padding: 8px 14px;
+        /* Clear notches/gesture areas without dropping the base horizontal pad */
+        padding-top: max(8px, env(safe-area-inset-top));
+        padding-left: max(14px, env(safe-area-inset-left));
+        padding-right: max(14px, env(safe-area-inset-right));
         border-bottom: 1px solid var(--border);
         max-width: var(--shell-max);
         width: 100%;
@@ -614,6 +623,8 @@ ui <- function(request) page_fluid(
         min-width: 0;
         overflow: hidden;
         padding: 0;
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
         background: var(--bg);
         border-bottom: 2px solid var(--border);
       }
@@ -730,7 +741,7 @@ ui <- function(request) page_fluid(
         min-height: 0;
         border: 0 !important;
         background: transparent !important;
-        padding: 0 !important;
+        padding: 0 0 env(safe-area-inset-bottom) !important;
         overflow-y: auto !important;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
@@ -776,6 +787,20 @@ ui <- function(request) page_fluid(
       .probability-section { padding-top: 6px; }
       .probability-section > .section-divider:first-child { margin-top: 0; }
 
+      /* Gauge scales with available width instead of a fixed pixel height */
+      .gauge-wrap {
+        width: 100%;
+        max-width: 560px;
+        aspect-ratio: 1.65 / 1;
+        margin-inline: auto;
+      }
+      .gauge-wrap .html-widget,
+      .gauge-wrap .plotly,
+      .gauge-wrap .js-plotly-plot {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
       /* ── Section dividers — rendered as semantic headings ────────────── */
       .section-divider {
         display: flex; align-items: center; gap: 8px;
@@ -795,7 +820,7 @@ ui <- function(request) page_fluid(
       }
       /* Favored-side verdict bridges meter → numbers */
       .verdict-chip {
-        text-align: center; font-size: 1rem; font-weight: 700;
+        text-align: center; font-size: clamp(0.95rem, 4.5vw, 1rem); font-weight: 700;
         color: var(--text); margin-bottom: 12px;
       }
       .fav-atk .verdict-chip { color: var(--atk-text); }
@@ -812,7 +837,7 @@ ui <- function(request) page_fluid(
       /* Hairline separators between the three groups */
       .mr-sims { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
       .mr-pct {
-        font-size: 1.7rem; font-weight: 800; line-height: 1.05;
+        font-size: clamp(1.35rem, 7vw, 1.7rem); font-weight: 800; line-height: 1.05;
         font-variant-numeric: tabular-nums; color: var(--text);
       }
       .mr-atk .mr-pct { color: var(--atk-text); }
@@ -824,6 +849,24 @@ ui <- function(request) page_fluid(
       /* The favored side leads; the trailing side recedes (kept readable) */
       .matchup.fav-atk .mr-def .mr-pct,
       .matchup.fav-def .mr-atk .mr-pct { opacity: 0.55; }
+
+      /* Very narrow phones: keep attacker vs defender side by side, drop the
+         simulations count to a full-width second row so nothing gets cramped. */
+      @media (max-width: 374px) {
+        .matchup-readout {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px 0;
+        }
+        .mr-sims {
+          grid-column: 1 / -1;
+          grid-row: 2;
+          border-left: 0;
+          border-right: 0;
+          border-top: 1px solid var(--border);
+          padding-top: 10px;
+        }
+      }
 
       /* ── Visible focus for keyboard users ────────────────────────────── */
       .form-control:focus-visible,
@@ -878,7 +921,12 @@ ui <- function(request) page_fluid(
         #scenario_tabs.nav-tabs { height: 44px; }
         #scenario_tabs.nav-tabs > li > a { height: 38px; min-width: 58px; padding: 0 8px; font-size: 1rem; }
         #scenario_tabs.nav-tabs > li > a[data-value='__add_tab__'] { min-width: 44px; }
-        .app-title-bar { padding: 6px 12px; }
+        .app-title-bar {
+          padding: 6px 12px;
+          padding-top: max(6px, env(safe-area-inset-top));
+          padding-left: max(12px, env(safe-area-inset-left));
+          padding-right: max(12px, env(safe-area-inset-right));
+        }
 
         /* Sidebar on mobile: bslib absolutely-positions the aside panel,
            but the grid row still reserves its height as a gap.
@@ -932,6 +980,63 @@ ui <- function(request) page_fluid(
         tabContent.classList.toggle('sidebar-open', !!sidebarOpen);
       }
 
+      function scrollActiveTab(behavior) {
+        var el = document.querySelector('#scenario_tabs li.active > a, #scenario_tabs .nav-link.active');
+        if (el && el.scrollIntoView) {
+          el.scrollIntoView({behavior: behavior || 'auto', inline: 'center', block: 'nearest'});
+        }
+      }
+
+      function keepFocusedSidebarFieldVisible(target) {
+        var isMobile = window.matchMedia('(max-width: 575.98px)').matches;
+        if (!isMobile) return;
+        var tabContent = document.querySelector('.tab-content');
+        if (!tabContent || !tabContent.classList.contains('sidebar-open')) return;
+        var activeField = target || document.activeElement;
+        if (!activeField || !activeField.matches('input, select, textarea')) return;
+        var activeSidebar = activeField.closest('aside.sidebar');
+        if (!activeSidebar) return;
+        setTimeout(function() {
+          if (!(document.activeElement === activeField || target === activeField)) return;
+          if (!activeField.scrollIntoView) return;
+
+          var fieldRect = activeField.getBoundingClientRect();
+          var sidebarRect = activeSidebar.getBoundingClientRect();
+
+          var clipped =
+            fieldRect.top < sidebarRect.top ||
+            fieldRect.bottom > sidebarRect.bottom;
+
+          if (clipped) {
+            activeField.scrollIntoView({
+              behavior: 'smooth',
+              block: 'nearest',
+              inline: 'nearest'
+            });
+          }
+        }, 75);
+      }
+
+      // Keep the spacer + --header-height in lockstep with the fixed header's
+      // actual rendered height (changes with safe-area insets, font loading,
+      // orientation, and the tab strip wrapping).
+      // Frame guard: bursts of ResizeObserver/resize callbacks collapse into a
+      // single measurement on the next frame instead of one per event.
+      var headerSyncFrame = null;
+      function syncHeaderHeight() {
+        if (headerSyncFrame !== null) return;
+        headerSyncFrame = requestAnimationFrame(function() {
+          headerSyncFrame = null;
+          var spacer = document.getElementById('header-spacer');
+          var header = document.querySelector('.app-sticky-header');
+          if (header && spacer) {
+            var headerHeight = header.offsetHeight + 'px';
+            document.documentElement.style.setProperty('--header-height', headerHeight);
+            spacer.style.height = headerHeight;
+          }
+        });
+      }
+
       function hoistTabContent() {
         var spacer     = document.getElementById('header-spacer');
         var header     = document.querySelector('.app-sticky-header');
@@ -940,11 +1045,11 @@ ui <- function(request) page_fluid(
           spacer.parentNode.insertBefore(tabContent, spacer.nextSibling);
           spacer._hoisted = true;
         }
-        // Always sync spacer height to actual fixed header height
-        if (header && spacer) {
-          var headerHeight = header.offsetHeight + 'px';
-          document.documentElement.style.setProperty('--header-height', headerHeight);
-          spacer.style.height = headerHeight;
+        syncHeaderHeight();
+        // Observe the header once so height changes resync without a resize event.
+        if (header && !header._ro && window.ResizeObserver) {
+          header._ro = new ResizeObserver(syncHeaderHeight);
+          header._ro.observe(header);
         }
         syncSidebarScrollState();
       }
@@ -953,14 +1058,25 @@ ui <- function(request) page_fluid(
       $(document).on('shiny:sessioninitialized', hoistTabContent);
       window.addEventListener('resize', hoistTabContent);
       document.addEventListener('bslib.sidebar', syncSidebarScrollState, true);
-      document.addEventListener('shown.bs.tab', syncSidebarScrollState, true);
+      document.addEventListener('shown.bs.tab', function() {
+        syncSidebarScrollState();
+        setTimeout(function() { scrollActiveTab('auto'); }, 50);
+      }, true);
+      document.addEventListener('focusin', function(e) {
+        keepFocusedSidebarFieldVisible(e.target);
+      }, true);
+      document.addEventListener('click', function(e) {
+        keepFocusedSidebarFieldVisible(e.target);
+      }, true);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', function() {
+          keepFocusedSidebarFieldVisible();
+        });
+      }
 
       Shiny.addCustomMessageHandler('scroll_active_tab', function(_) {
         setTimeout(function() {
-          var el = document.querySelector('#scenario_tabs li.active > a, #scenario_tabs .nav-link.active');
-          if (el && el.scrollIntoView) {
-            el.scrollIntoView({behavior: 'smooth', inline: 'center', block: 'nearest'});
-          }
+          scrollActiveTab('smooth');
           syncSidebarScrollState();
         }, 50);
       });
