@@ -16,15 +16,12 @@ library(dplyr)
 library(ggplot2)
 library(plotly)
 
-# ── Greek alphabet (capitals) used as scenario tab labels ─────────────────
-# Cap the number of scenarios to length(GREEK_LETTERS) = 24.
-GREEK_LETTERS <- c(
-  "\u0391", "\u0392", "\u0393", "\u0394", "\u0395", "\u0396",  # Α Β Γ Δ Ε Ζ
-  "\u0397", "\u0398", "\u0399", "\u039A", "\u039B", "\u039C",  # Η Θ Ι Κ Λ Μ
-  "\u039D", "\u039E", "\u039F", "\u03A0", "\u03A1", "\u03A3",  # Ν Ξ Ο Π Ρ Σ
-  "\u03A4", "\u03A5", "\u03A6", "\u03A7", "\u03A8", "\u03A9"   # Τ Υ Φ Χ Ψ Ω
+# ── Circled digits used as scenario tab labels ────────────────────────────
+SCENARIO_NUMERALS <- c(
+  "\u2460", "\u2461", "\u2462", "\u2463", "\u2464",
+  "\u2465", "\u2466", "\u2467", "\u2468"
 )
-MAX_SCENARIOS <- length(GREEK_LETTERS)  # = 24
+MAX_SCENARIOS <- length(SCENARIO_NUMERALS)  # = 9
 
 # ── Simulation helpers ───────────────────────────────────────────────────
 
@@ -89,7 +86,7 @@ run_simulations <- function(init_units, n_sims = 1000) {
 
 # ── Scenario module: one self-contained battle scenario ───────────────────
 
-scenarioUI <- function(id, letter = NULL) {
+scenarioUI <- function(id, label = NULL) {
   ns <- NS(id)
   # Sidebar layout per scenario: left = inputs, right = outputs.
   # We use layout_sidebar so each tab has its own sidebar.
@@ -204,11 +201,11 @@ scenarioUI <- function(id, letter = NULL) {
   )
 }
 
-scenarioServer <- function(id, letter = NULL) {
+scenarioServer <- function(id, label = NULL) {
   moduleServer(id, function(input, output, session) {
 
     output$scenario_letter <- renderText({
-      if (is.null(letter)) "" else letter
+      if (is.null(label)) "" else label
     })
 
     raw_results <- reactive({
@@ -604,20 +601,21 @@ ui <- function(request) page_fluid(
         border-radius: 6px 6px 0 0;
         border: 1px solid transparent;
         border-bottom: 0 !important;
-        color: #7f8c8d;
+        color: #98a1a8;
         text-decoration: none;
-        transition: color 0.12s, background 0.12s;
+        transition: color 0.12s, background 0.12s, border-color 0.12s;
         -webkit-tap-highlight-color: transparent;
       }
       #scenario_tabs.nav-tabs > li.active > a,
       #scenario_tabs.nav-tabs > li > a.active {
-        color: #ecf0f1;
-        background: #32383e;
-        border-color: #4a5056 #4a5056 #32383e !important;
+        color: #ffffff;
+        background: #6e1423;
+        border-color: #6e1423 #6e1423 #6e1423 !important;
       }
       #scenario_tabs.nav-tabs > li > a:hover:not(.active) {
-        color: #bdc3c7;
-        background: #2c3136;
+        color: #e2e6ea;
+        background: #343a40;
+        border-color: #4a5056 #4a5056 transparent;
       }
       #scenario_tabs.nav-tabs > li > a[data-value='__add_tab__'] {
         color: #2ecc71;
@@ -783,9 +781,9 @@ ui <- function(request) page_fluid(
         navset_tab(
           id = "scenario_tabs",
           nav_panel(
-            title = GREEK_LETTERS[1],
+            title = SCENARIO_NUMERALS[1],
             value = "scenario_alpha",
-            scenarioUI("scenario_alpha", letter = GREEK_LETTERS[1])
+            scenarioUI("scenario_alpha", label = SCENARIO_NUMERALS[1])
           ),
           nav_panel(
             title = "+",
@@ -813,10 +811,10 @@ server <- function(input, output, session) {
 
   session$allowReconnect("force")
 
-  # ── Track currently-open scenarios (stable internal id + display letter) ──
+  # ── Track currently-open scenarios (stable internal id + display label) ──
   # We always keep the original alpha scenario (started in UI).
   scenarios <- reactiveVal(
-    data.frame(id = "scenario_alpha", letter = GREEK_LETTERS[1],
+    data.frame(id = "scenario_alpha", label = SCENARIO_NUMERALS[1],
                stringsAsFactors = FALSE)
   )
   next_scenario_seq <- reactiveVal(1L)
@@ -827,12 +825,12 @@ server <- function(input, output, session) {
     sprintf("scenario_%04d", next_seq)
   }
 
-  mount_scenario <- function(id, letter) {
-    scenarioServer(id, letter = letter)
+  mount_scenario <- function(id, label) {
+    scenarioServer(id, label = label)
   }
 
   # Boot up the alpha scenario's server logic.
-  mount_scenario("scenario_alpha", GREEK_LETTERS[1])
+  mount_scenario("scenario_alpha", SCENARIO_NUMERALS[1])
 
   # Global close: removes whichever scenario is currently active.
   observeEvent(input$global_close_scenario, {
@@ -859,16 +857,15 @@ server <- function(input, output, session) {
     if (!identical(input$scenario_tabs, "__add_tab__")) return()
 
     current <- scenarios()
-    available_letters <- base::setdiff(GREEK_LETTERS, current$letter)
-    if (length(available_letters) == 0) {
+    available_labels <- base::setdiff(SCENARIO_NUMERALS, current$label)
+    if (length(available_labels) == 0) {
       # Bounce the user off the "+" tab back to the last real scenario,
       # and tell them why nothing happened.
       nav_select("scenario_tabs",
                  selected = current$id[nrow(current)],
                  session  = session)
       showNotification(
-        sprintf("Tab limit reached (%d scenarios - Greek alphabet exhausted).",
-                MAX_SCENARIOS),
+        sprintf("Tab limit reached (%d scenarios).", MAX_SCENARIOS),
         type = "warning",
         duration = 4
       )
@@ -876,7 +873,7 @@ server <- function(input, output, session) {
     }
 
     new_id    <- next_scenario_id()
-    new_label <- available_letters[1]
+    new_label <- available_labels[1]
 
     # Insert the new scenario tab BEFORE the "+" tab.
     nav_insert(
@@ -886,7 +883,7 @@ server <- function(input, output, session) {
       nav      = nav_panel(
         title = new_label,
         value = new_id,
-        scenarioUI(new_id, letter = new_label)
+        scenarioUI(new_id, label = new_label)
       ),
       session  = session
     )
@@ -897,7 +894,7 @@ server <- function(input, output, session) {
     # Track it in our reactive list.
     scenarios(rbind(
       current,
-      data.frame(id = new_id, letter = new_label, stringsAsFactors = FALSE)
+      data.frame(id = new_id, label = new_label, stringsAsFactors = FALSE)
     ))
 
     # Switch the user to the brand-new tab (don't leave them on "+").
