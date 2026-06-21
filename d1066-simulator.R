@@ -88,115 +88,72 @@ run_simulations <- function(init_units, n_sims = 1000) {
 
 scenarioUI <- function(id, label = NULL) {
   ns <- NS(id)
-  # Sidebar layout per scenario: left = inputs, right = outputs.
-  # We use layout_sidebar so each tab has its own sidebar.
   layout_sidebar(
     sidebar = sidebar(
+      id = ns("battle_setup"),
       width = 320,
+      open = list(desktop = "open", mobile = "closed"),
+      class = "scenario-sidebar",
 
-      # Attacker inputs
-      card(
-        card_header(class = "bg-danger text-white",
-                    span("\u2694\uFE0F Attackers")),
-        card_body(
-          class = "pt-2 pb-1",
-          div(class = "dice-row",
-            unit_input(ns("atk_d6"),  "d6",  2),
-            unit_input(ns("atk_d12"), "d12", 2),
-            unit_input(ns("atk_d20"), "d20", 2)
-          )
-        )
+      section_label("ATTACKERS"),
+      div(class = "dice-row",
+        unit_input(ns("atk_d6"),  "d6",  2),
+        unit_input(ns("atk_d12"), "d12", 2),
+        unit_input(ns("atk_d20"), "d20", 2)
       ),
 
-      # Defender inputs
-      card(
-        card_header(class = "bg-primary text-white",
-                    span("\uD83D\uDEE1\uFE0F Defenders")),
-        card_body(
-          class = "pt-2 pb-1",
-          numericInput(ns("def_castle"), "\uD83C\uDFF0 Castles",
-                       value = 0, min = 0, step = 1),
-          div(class = "dice-row",
-            unit_input(ns("def_d6"),  "d6",  2),
-            unit_input(ns("def_d12"), "d12", 2),
-            unit_input(ns("def_d20"), "d20", 2)
-          )
-        )
+      section_label("DEFENDERS"),
+      numericInput(ns("def_castle"), "Castles",
+                   value = 0, min = 0, step = 1),
+      div(class = "dice-row",
+        unit_input(ns("def_d6"),  "d6",  2),
+        unit_input(ns("def_d12"), "d12", 2),
+        unit_input(ns("def_d20"), "d20", 2)
       ),
 
+      section_label("SIMULATION"),
       numericInput(ns("sims"), "Simulations",
                    value = 1000, min = 1, step = 100),
-      actionButton(ns("run"), "\u25B6 Run Simulation",
-                   class = "btn-success btn-lg w-100 mt-2")
+      input_task_button(ns("run"), "Run Simulation",
+                        label_busy = "Simulating…",
+                        class = "btn-run w-100 mt-2")
     ),
 
-      # Main panel
-      layout_columns(
-        col_widths = breakpoints(md = c(5, 7), xs = c(12, 12)),
-        card(
-          card_header(
-            span(
-              class = "scenario-letter",
-              style = "color: #adb5bd; font-weight: 700; margin-right: 8px;",
-              textOutput(ns("scenario_letter"), inline = TRUE)
-            ),
-            "Attacker Win Probability"
-          ),
-          card_body(plotlyOutput(ns("win_gauge"), height = "250px"))
-        ),
-        layout_columns(
-          col_widths = breakpoints(sm = c(4, 4, 4),
-                                    xs = c(12, 12, 12)),
-          value_box(
-            title    = "Attacker Win %",
-            value    = textOutput(ns("atk_pct"), inline = TRUE),
-            showcase = span(style = "font-size: 2.5rem;", "\u2694\uFE0F"),
-            theme    = "danger"
-          ),
-          value_box(
-            title    = "Defender Win %",
-            value    = textOutput(ns("def_pct"), inline = TRUE),
-            showcase = span(style = "font-size: 2.5rem;", "\uD83D\uDEE1\uFE0F"),
-            theme    = "primary"
-          ),
-          value_box(
-            title    = "Simulations Run",
-            value    = textOutput(ns("n_sims_display"), inline = TRUE),
-            showcase = span(style = "font-size: 2.5rem;", "\uD83C\uDFB2"),
-            theme    = "secondary"
-          )
-        )
-      ),
+    div(class = "content-section probability-section",
+      section_label("WIN PROBABILITY"),
+      div(class = "gauge-wrap",
+          plotlyOutput(ns("win_gauge"), height = "100%")),
+      uiOutput(ns("win_matchup")),
+      div(class = "sr-only", role = "status", `aria-live` = "polite",
+          textOutput(ns("win_summary")))
+    ),
 
-      layout_columns(
-        col_widths = breakpoints(md = c(5, 7), xs = c(12, 12)),
-        card(
-          card_header("Outcome Distribution"),
-          card_body(plotOutput(ns("dist_plot"), height = "400px"))
-        ),
-        card(
-          card_header("Marginal Unit Value"),
-          card_body(
-            p(class = "text-muted small",
-              "Win-rate change from adding +1 of each unit type to the current setup."),
-            layout_columns(
-              col_widths = breakpoints(md = c(6, 6), xs = c(12, 12)),
-              card(
-                card_header(class = "bg-danger text-white",
-                            "\u2694\uFE0F Attacker +1"),
-                card_body(uiOutput(ns("atk_marginal")))
-              ),
-              card(
-                card_header(class = "bg-primary text-white",
-                            "\uD83D\uDEE1\uFE0F Defender +1"),
-                card_body(uiOutput(ns("def_marginal")))
-              )
-            ),
-            hr(),
-            uiOutput(ns("recommendation"))
+    layout_columns(
+      col_widths = breakpoints(lg = c(7, 5), xs = c(12, 12)),
+      div(class = "content-section",
+        section_label("OUTCOME DISTRIBUTION"),
+        plotOutput(ns("dist_plot"), height = "380px"),
+        div(class = "sr-only", `aria-live` = "polite", textOutput(ns("dist_summary")))
+      ),
+      div(class = "content-section",
+        section_label("MARGINAL UNIT VALUE"),
+        p(class = "dashboard-note",
+          "Win-rate change from adding +1 of each unit type to the current setup."),
+        layout_columns(
+          col_widths = breakpoints(md = c(6, 6), xs = c(12, 12)),
+          div(
+            section_label("ATTACKER +1", level = "h3"),
+            uiOutput(ns("atk_marginal"))
+          ),
+          div(
+            section_label("DEFENDER +1", level = "h3"),
+            uiOutput(ns("def_marginal"))
           )
-        )
+        ),
+        hr(),
+        uiOutput(ns("recommendation"))
       )
+    )
   )
 }
 
@@ -235,53 +192,92 @@ scenarioServer <- function(id, label = NULL) {
       bindEvent(input$run, ignoreNULL = FALSE)
 
     observeEvent(input$run, {
-      session$sendCustomMessage("close_sidebar", list())
+      toggle_sidebar("battle_setup", open = FALSE, session = session)
     }, ignoreInit = TRUE)
 
-    # ── Win probability gauge ──
+    # ── Win probability gauge (radial meter) ──
     output$win_gauge <- renderPlotly({
       req(raw_results())
       win_pct <- mean(raw_results()$winner == "Attacker") * 100
       plot_ly(
         type = "indicator", mode = "gauge+number", value = win_pct,
-        number = list(suffix = "%", font = list(size = 36, color = "#dee2e6")),
+        number = list(suffix = "%", font = list(size = 36, color = "#c8cdc9")),
         gauge = list(
           axis = list(range = list(0, 100), tickwidth = 2,
-                      tickcolor = "#adb5bd",
-                      tickfont = list(color = "#adb5bd"), dtick = 25),
-          bar = list(color = "#e74c3c", thickness = 0.7),
-          bgcolor = "#3a3f44", borderwidth = 0,
+                      tickcolor = "#8a9490",
+                      tickfont = list(color = "#8a9490"), dtick = 25),
+          # Value arc fills the full ring thickness so it sits flush on the
+          # base track and the two read as one continuous meter.
+          bar = list(color = "#a02020", thickness = 1.0,
+                     line = list(color = "#6e1616", width = 1)),
+          # Opaque charcoal base track, lifted above the panel (#1a1e21) with a
+          # subtle border defining both the inner and outer curves. A single
+          # full-range step guarantees the unfilled portion stays visible even
+          # at very low probabilities.
+          bgcolor = "#333c41",
+          bordercolor = "#475157", borderwidth = 1,
           steps = list(
-            list(range = c(0, 25),  color = "#2c3e50"),
-            list(range = c(25, 50), color = "#34495e"),
-            list(range = c(50, 75), color = "#34495e"),
-            list(range = c(75, 100), color = "#2c3e50")
+            list(range = c(0, 100), color = "#333c41")
           ),
           threshold = list(
-            line = list(color = "#2ecc71", width = 3),
-            thickness = 0.8, value = 50
+            line = list(color = "#3d7a52", width = 3),
+            thickness = 1.0, value = 50
           )
         )
       ) %>%
         layout(paper_bgcolor = "rgba(0,0,0,0)",
                plot_bgcolor  = "rgba(0,0,0,0)",
                margin = list(t = 40, b = 20, l = 30, r = 30),
-               font = list(color = "#dee2e6")) %>%
-        config(displayModeBar = FALSE)
+               font = list(color = "#c8cdc9")) %>%
+        config(displayModeBar = FALSE, responsive = TRUE)
     })
 
-    # ── Value boxes ──
-    output$atk_pct <- renderText({
+    # ── Comparative matchup readout (pairs with the gauge) ──
+    # Leads with the result — favored side, margin, and simulation context —
+    # so the matchup reads as a balanced attacker-vs-defender comparison.
+    output$win_matchup <- renderUI({
       req(raw_results())
-      sprintf("%.1f%%", mean(raw_results()$winner == "Attacker") * 100)
+      df  <- raw_results()
+      n   <- nrow(df)
+      atk <- mean(df$winner == "Attacker") * 100
+      def <- 100 - atk
+      margin <- abs(atk - def)
+
+      # Within ~2 points we call it even — a meaningful neutral state.
+      fav <- if (margin < 2) "even" else if (atk > def) "atk" else "def"
+      verdict <- switch(fav,
+        atk  = sprintf("Attacker favored by %.0f points", margin),
+        def  = sprintf("Defender favored by %.0f points", margin),
+        even = "Even matchup"
+      )
+      tags$div(
+        class = paste0("matchup fav-", fav),
+        # Favored-side verdict bridges the meter to the numbers below it.
+        tags$div(class = "verdict-chip", verdict),
+        tags$div(
+          class = "matchup-readout",
+          tags$div(class = "mr-side mr-atk",
+            tags$div(class = "mr-pct", sprintf("%.1f%%", atk)),
+            tags$div(class = "mr-team", "Attacker")
+          ),
+          tags$div(class = "mr-side mr-sims",
+            tags$div(class = "mr-pct", format(n, big.mark = ",")),
+            tags$div(class = "mr-team", "Simulations")
+          ),
+          tags$div(class = "mr-side mr-def",
+            tags$div(class = "mr-pct", sprintf("%.1f%%", def)),
+            tags$div(class = "mr-team", "Defender")
+          )
+        )
+      )
     })
-    output$def_pct <- renderText({
+
+    # Screen-reader summary of the gauge (plotly itself is not accessible).
+    output$win_summary <- renderText({
       req(raw_results())
-      sprintf("%.1f%%", mean(raw_results()$winner == "Defender") * 100)
-    })
-    output$n_sims_display <- renderText({
-      req(raw_results())
-      format(nrow(raw_results()), big.mark = ",")
+      win_pct <- mean(raw_results()$winner == "Attacker") * 100
+      sprintf("Attacker win probability %.1f percent; defender %.1f percent.",
+              win_pct, 100 - win_pct)
     })
 
     # ── Distribution chart ──
@@ -299,29 +295,48 @@ scenarioServer <- function(id, label = NULL) {
       ggplot(plot_data, aes(x = outcome, fill = winner)) +
         geom_histogram(binwidth = 1, alpha = 0.85,
                        color = "white", linewidth = 0.3) +
-        scale_fill_manual(values = c("Attacker" = "#e74c3c",
-                                     "Defender" = "#3498db")) +
+        scale_fill_manual(values = c("Attacker" = "#a02020",
+                                     "Defender" = "#2a6080")) +
         scale_x_continuous(limits = c(-max_abs - 0.5, max_abs + 0.5),
                            labels = function(x) abs(x)) +
-        geom_vline(xintercept = 0, color = "#adb5bd",
+        # Add headroom above the tallest bar so the side labels sit clear of it.
+        scale_y_continuous(expand = expansion(mult = c(0, 0.16))) +
+        geom_vline(xintercept = 0, color = "#8a9490",
                    linewidth = 0.6, linetype = "dashed") +
         annotate("text", x = -max_abs * 0.5, y = Inf,
                  label = "\u2190 Defender wins",
-                 color = "#3498db", vjust = 2, size = 4.5,
+                 color = "#2a6080", vjust = 1.3, size = 4.5,
                  fontface = "bold") +
         annotate("text", x = max_abs * 0.5, y = Inf,
                  label = "Attacker wins \u2192",
-                 color = "#e74c3c", vjust = 2, size = 4.5,
+                 color = "#a02020", vjust = 1.3, size = 4.5,
                  fontface = "bold") +
         labs(x = "Surviving Units", y = "Frequency", fill = NULL) +
         theme_minimal(base_size = 14) +
-        theme(plot.background  = element_rect(fill = "#272b30", color = NA),
-              panel.background = element_rect(fill = "#272b30", color = NA),
-              panel.grid.major = element_line(color = "#3a3f44"),
+        theme(plot.background  = element_rect(fill = "#1a1e21", color = NA),
+              panel.background = element_rect(fill = "#1a1e21", color = NA),
+              panel.grid.major = element_line(color = "#252b2e"),
               panel.grid.minor = element_blank(),
-              text             = element_text(color = "#dee2e6"),
-              axis.text        = element_text(color = "#adb5bd"),
+              text             = element_text(color = "#c8cdc9"),
+              axis.text        = element_text(color = "#8a9490"),
               legend.position  = "none")
+    })
+
+    # Screen-reader text summary of the distribution chart.
+    output$dist_summary <- renderText({
+      req(raw_results())
+      df <- raw_results()
+      n  <- nrow(df)
+      atk_wins <- sum(df$winner == "Attacker")
+      def_wins <- n - atk_wins
+      sprintf(
+        paste0("Outcome distribution across %s simulations. ",
+               "Attacker won %s (%.1f%%), defender won %s (%.1f%%). ",
+               "Bars right of center show surviving attacker units; bars left show surviving defender units."),
+        format(n, big.mark = ","),
+        format(atk_wins, big.mark = ","), 100 * atk_wins / n,
+        format(def_wins, big.mark = ","), 100 * def_wins / n
+      )
     })
 
     # ── Marginal benefit analysis ──
@@ -369,7 +384,7 @@ scenarioServer <- function(id, label = NULL) {
                 input$sims) %>%
       bindEvent(input$run, ignoreNULL = FALSE)
 
-    marginal_badge <- function(label, delta, efficiency, cost, color) {
+    marginal_badge <- function(label, delta, efficiency, cost, fill, text_color) {
       sign_char <- ifelse(delta >= 0, "+", "")
       pct_text  <- sprintf("%s%.1f%%", sign_char, delta * 100)
       eff_text  <- sprintf("%.1f%% per cost", efficiency * 100)
@@ -378,21 +393,21 @@ scenarioServer <- function(id, label = NULL) {
         style = "margin-bottom: 12px;",
         tags$div(
           style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 2px;",
-          tags$span(style = "font-weight: 600; color: #dee2e6; font-size: 1.05rem;", label),
-          tags$span(style = paste0("font-weight: 700; font-size: 1.15rem; color:", color, ";"),
+          tags$span(style = "font-weight: 600; color: var(--text); font-size: 1.05rem;", label),
+          tags$span(style = paste0("font-weight: 700; font-size: 1.15rem; color:", text_color, ";"),
                     pct_text)
         ),
         tags$div(
           style = "display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;",
-          tags$span(style = "color: #8e9297; font-size: 0.82rem;",
+          tags$span(style = "color: var(--text-muted); font-size: 0.82rem;",
                     paste0("Cost: ", cost)),
-          tags$span(style = "color: #8e9297; font-size: 0.82rem; font-style: italic;",
+          tags$span(style = "color: var(--text-muted); font-size: 0.82rem; font-style: italic;",
                     eff_text)
         ),
         tags$div(
-          style = "background: #3a3f44; border-radius: 4px; height: 8px; overflow: hidden;",
+          style = "background: var(--surface); border-radius: 4px; height: 8px; overflow: hidden;",
           tags$div(style = paste0(
-            "width:", bar_width, "%; height: 100%; background:", color,
+            "width:", bar_width, "%; height: 100%; background:", fill,
             "; border-radius: 4px;"
           ))
         )
@@ -405,12 +420,12 @@ scenarioServer <- function(id, label = NULL) {
       eff <- marginal_data()$atk_eff
       best <- names(which.max(eff))
       tagList(
-        marginal_badge(paste0("+1 d6",  if (best == "d6")  " \u2B50" else ""),
-                       m["d6"],  eff["d6"],  unit_cost["d6"],  "#e74c3c"),
-        marginal_badge(paste0("+1 d12", if (best == "d12") " \u2B50" else ""),
-                       m["d12"], eff["d12"], unit_cost["d12"], "#e74c3c"),
-        marginal_badge(paste0("+1 d20", if (best == "d20") " \u2B50" else ""),
-                       m["d20"], eff["d20"], unit_cost["d20"], "#e74c3c")
+        marginal_badge(paste0("+1 d6",  if (best == "d6")  " \u2190 best" else ""),
+                       m["d6"],  eff["d6"],  unit_cost["d6"],  "#a02020", "#e07a6e"),
+        marginal_badge(paste0("+1 d12", if (best == "d12") " \u2190 best" else ""),
+                       m["d12"], eff["d12"], unit_cost["d12"], "#a02020", "#e07a6e"),
+        marginal_badge(paste0("+1 d20", if (best == "d20") " \u2190 best" else ""),
+                       m["d20"], eff["d20"], unit_cost["d20"], "#a02020", "#e07a6e")
       )
     })
 
@@ -420,12 +435,12 @@ scenarioServer <- function(id, label = NULL) {
       eff <- marginal_data()$def_eff
       best <- names(which.max(eff))
       tagList(
-        marginal_badge(paste0("+1 d6",  if (best == "d6")  " \u2B50" else ""),
-                       m["d6"],  eff["d6"],  unit_cost["d6"],  "#3498db"),
-        marginal_badge(paste0("+1 d12", if (best == "d12") " \u2B50" else ""),
-                       m["d12"], eff["d12"], unit_cost["d12"], "#3498db"),
-        marginal_badge(paste0("+1 d20", if (best == "d20") " \u2B50" else ""),
-                       m["d20"], eff["d20"], unit_cost["d20"], "#3498db")
+        marginal_badge(paste0("+1 d6",  if (best == "d6")  " \u2190 best" else ""),
+                       m["d6"],  eff["d6"],  unit_cost["d6"],  "#2a6080", "#6fa8c7"),
+        marginal_badge(paste0("+1 d12", if (best == "d12") " \u2190 best" else ""),
+                       m["d12"], eff["d12"], unit_cost["d12"], "#2a6080", "#6fa8c7"),
+        marginal_badge(paste0("+1 d20", if (best == "d20") " \u2190 best" else ""),
+                       m["d20"], eff["d20"], unit_cost["d20"], "#2a6080", "#6fa8c7")
       )
     })
 
@@ -434,21 +449,25 @@ scenarioServer <- function(id, label = NULL) {
       m <- marginal_data()
       atk_best <- names(which.max(m$atk_eff))
       def_best <- names(which.max(m$def_eff))
-      atk_val  <- sprintf("+%.1f%% per cost", max(m$atk_eff) * 100)
-      def_val  <- sprintf("+%.1f%% per cost", max(m$def_eff) * 100)
+      meta <- function(gain, cost, eff) {
+        sprintf("%+.1f%% win  ·  cost %d  ·  %+.1f%% per cost",
+                gain * 100, cost, eff * 100)
+      }
       tags$div(
-        style = "padding: 8px 0;",
-        tags$p(
-          style = "font-size: 1rem; color: #dee2e6; margin-bottom: 6px;",
-          tags$strong("Best attacker buy: "),
-          tags$span(style = "color: #e74c3c; font-weight: 700;",
-                    paste0(atk_best, " (", atk_val, ")"))
+        class = "rec-callouts",
+        tags$div(
+          class = "rec-card rec-card-atk",
+          tags$div(class = "rec-card-title", "Best Attacker Buy"),
+          tags$div(class = "rec-card-unit", atk_best),
+          tags$div(class = "rec-card-meta",
+                   meta(m$atk[[atk_best]], unit_cost[[atk_best]], max(m$atk_eff)))
         ),
-        tags$p(
-          style = "font-size: 1rem; color: #dee2e6; margin-bottom: 0;",
-          tags$strong("Best defender buy: "),
-          tags$span(style = "color: #3498db; font-weight: 700;",
-                    paste0(def_best, " (", def_val, ")"))
+        tags$div(
+          class = "rec-card rec-card-def",
+          tags$div(class = "rec-card-title", "Best Defender Buy"),
+          tags$div(class = "rec-card-unit", def_best),
+          tags$div(class = "rec-card-meta",
+                   meta(m$def[[def_best]], unit_cost[[def_best]], max(m$def_eff)))
         )
       )
     })
@@ -461,9 +480,9 @@ scenarioServer <- function(id, label = NULL) {
 app_theme <- bs_theme(
   version   = 5,
   bootswatch = "slate",
-  primary   = "#e74c3c",
-  secondary = "#3498db",
-  success   = "#2ecc71",
+  primary   = "#a02020",
+  secondary = "#2a6080",
+  success   = "#3d7a52",
   "font-size-base" = "0.92rem"
 )
 
@@ -471,6 +490,11 @@ app_theme <- bs_theme(
 
 unit_input <- function(id, label, value, icon_text = NULL) {
   numericInput(id, label, value = value, min = 0, step = 1)
+}
+
+section_label <- function(text, level = "h2") {
+  # Renders as a real heading (h2/h3) styled as a divider, for semantic structure.
+  tag(level, list(class = "section-divider", tags$span(text)))
 }
 
 # ── UI ───────────────────────────────────────────────────────────────────
@@ -482,19 +506,42 @@ ui <- function(request) page_fluid(
   # Heartbeat + custom disconnect overlay (unchanged)
   tags$head(
     tags$meta(name = "viewport",
-              content = "width=device-width, initial-scale=1, shrink-to-fit=no"),
+              content = "width=device-width, initial-scale=1, shrink-to-fit=no, viewport-fit=cover"),
     tags$style(HTML("
       :root {
         --header-height: 89px;
+        /* ── Surfaces & text ── */
+        --bg: #1a1e21;
+        --surface: #252b2e;
+        --surface-2: #2e3538;
+        --border: #2e3538;
+        --text: #c8cdc9;
+        --text-muted: #8a9490;   /* AA for normal text on --bg */
+        /* ── Team colors: deep fills vs AA-compliant accent text ── */
+        --atk-fill: #a02020;
+        --def-fill: #2a6080;
+        --atk-text: #e07a6e;     /* lighter red — AA as text on dark */
+        --def-text: #6fa8c7;     /* lighter blue — AA as text on dark */
+        --ok: #3d7a52;
+        /* ── 8px spacing scale ── */
+        --s1: 8px; --s2: 16px; --s3: 24px; --s4: 32px;
+        --radius: 8px;
+        --shell-max: 1280px;
+      }
+
+      .sr-only {
+        position: absolute !important; width: 1px; height: 1px;
+        padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0);
+        white-space: nowrap; border: 0;
       }
 
       /* ── Reset: strip page_fluid container padding so we can go edge-to-edge */
+      /* Dynamic viewport-height shell: sizes to the *visible* viewport so mobile
+         browser chrome / the on-screen keyboard can't clip content (the old
+         position:fixed full-page pin did). overscroll-behavior:none is kept to
+         preserve the earlier scroll-wobble fix. */
       html, body {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
+        min-height: 100%;
         overflow: hidden;
         overflow-x: hidden;
         overscroll-behavior: none;
@@ -506,19 +553,42 @@ ui <- function(request) page_fluid(
         padding-right: 0 !important;
         max-width: 100% !important;
         width: 100%;
-        height: 100%;
+        height: 100dvh;
+        min-height: 0;   /* allow the flex children to own scrolling */
         overflow: hidden;
         overflow-x: hidden;
       }
+      @supports not (height: 100dvh) {
+        body > .container-fluid { height: 100vh; }
+      }
 
       /* ── Title bar ──────────────────────────────────────────────────────── */
+      /* Header bar is full-bleed; its inner content is centered to --shell-max */
       .app-title-bar {
         display: flex;
         align-items: center;
         gap: 10px;
         padding: 8px 14px;
-        border-bottom: 1px solid #3a3f44;
+        /* Clear notches/gesture areas without dropping the base horizontal pad */
+        padding-top: max(8px, env(safe-area-inset-top));
+        padding-left: max(14px, env(safe-area-inset-left));
+        padding-right: max(14px, env(safe-area-inset-right));
+        border-bottom: 1px solid var(--border);
+        max-width: var(--shell-max);
+        width: 100%;
+        margin: 0 auto;
       }
+      .app-title-bar .app-title-spacer { flex: 1 1 auto; }
+      .app-settings-btn {
+        display: inline-flex; align-items: center; justify-content: center;
+        width: 36px; height: 36px; padding: 0;
+        background: transparent; color: var(--text-muted);
+        border: 1px solid var(--border); border-radius: var(--radius);
+        cursor: pointer; transition: color 0.12s, border-color 0.12s;
+      }
+      .app-settings-btn:hover { color: var(--text); border-color: var(--text-muted); }
+      .settings-help-list { margin: 0; padding-left: 1.1em; font-size: 0.85rem; }
+      .settings-help-list li { margin-bottom: 6px; }
 
       /* ── Fixed header: title bar + tab strip bar pinned to top of viewport ─ */
       /* Using position:fixed (not sticky) because navset_tab renders           */
@@ -532,7 +602,7 @@ ui <- function(request) page_fluid(
         right: 0;
         width: 100%;
         z-index: 1030;
-        background: #272b30;
+        background: #1a1e21;
         box-shadow: 0 2px 6px rgba(0,0,0,0.5);
       }
 
@@ -548,14 +618,18 @@ ui <- function(request) page_fluid(
         display: flex;
         align-items: flex-end;
         width: 100%;
+        max-width: var(--shell-max);
+        margin: 0 auto;
         min-width: 0;
         overflow: hidden;
         padding: 0;
-        background: #272b30;
-        border-bottom: 2px solid #3a3f44;
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+        background: var(--bg);
+        border-bottom: 2px solid var(--border);
       }
 
-      /* ── Blue action buttons ─────────────────────────────────────────────── */
+      /* ── Control button ──────────────────────────────────────────────── */
       .tabs-row-btn {
         flex: 0 0 48px;
         width: 48px;
@@ -565,7 +639,7 @@ ui <- function(request) page_fluid(
         justify-content: center;
         padding: 0 !important;
         margin: 0 !important;
-        background: #3498db !important;
+        background: #2a5568 !important;
         color: #ffffff !important;
         border: 0 !important;
         border-radius: 0 !important;
@@ -577,8 +651,8 @@ ui <- function(request) page_fluid(
         transition: background 0.12s;
         -webkit-tap-highlight-color: transparent;
       }
-      .tabs-row-btn:hover  { background: #2980b9 !important; }
-      .tabs-row-btn:active { background: #2471a3 !important; }
+      .tabs-row-btn:hover  { background: #1f4454 !important; }
+      .tabs-row-btn:active { background: #194050 !important; }
       .tabs-row-btn:focus  { outline: none; color: #fff !important; }
       .tabs-row-btn:focus-visible { outline: 2px solid #85c1e9; outline-offset: -2px; }
       .tabs-row-btn svg { width: 22px; height: 22px; fill: currentColor; display: block; }
@@ -632,30 +706,33 @@ ui <- function(request) page_fluid(
         border-radius: 6px 6px 0 0;
         border: 1px solid transparent;
         border-bottom: 0 !important;
-        color: #98a1a8;
+        /* All tabs share one charcoal surface; selection is shown by a thin
+           bottom accent + slightly lighter fill, not a colored block. */
+        background: #252b2e;
+        color: #99a2a6;
+        box-shadow: inset 0 -2px 0 transparent;
         text-decoration: none;
-        transition: color 0.12s, background 0.12s, border-color 0.12s;
+        transition: color 0.12s, background 0.12s, box-shadow 0.12s;
         -webkit-tap-highlight-color: transparent;
       }
       #scenario_tabs.nav-tabs > li.active > a,
       #scenario_tabs.nav-tabs > li > a.active {
         color: #ffffff;
-        background: #6e1423;
-        border-color: #6e1423 #6e1423 #6e1423 !important;
+        background: #2e3538;
+        box-shadow: inset 0 -2px 0 #cdd3cf;
       }
       #scenario_tabs.nav-tabs > li > a:hover:not(.active) {
-        color: #e2e6ea;
-        background: #343a40;
-        border-color: #4a5056 #4a5056 transparent;
+        color: #c8cdc9;
+        background: #2a3033;
       }
       #scenario_tabs.nav-tabs > li > a[data-value='__add_tab__'] {
-        color: #2ecc71;
+        color: #3d7a52;
         font-size: 1.5rem;
         min-width: 48px;
       }
       #scenario_tabs.nav-tabs > li > a[data-value='__add_tab__']:hover {
-        color: #27ae60;
-        background: #2c3136;
+        color: #2f6042;
+        background: #252b2e;
       }
 
       /* ── tab-content and scenario content: no container framing ─────────── */
@@ -664,7 +741,7 @@ ui <- function(request) page_fluid(
         min-height: 0;
         border: 0 !important;
         background: transparent !important;
-        padding: 0 !important;
+        padding: 0 0 env(safe-area-inset-bottom) !important;
         overflow-y: auto !important;
         overflow-x: hidden;
         -webkit-overflow-scrolling: touch;
@@ -675,6 +752,9 @@ ui <- function(request) page_fluid(
       }
       .tab-content > .tab-pane {
         min-height: 100%;
+        max-width: var(--shell-max);
+        margin: 0 auto;
+        width: 100%;
         border: 0 !important;
         background: transparent !important;
         padding: 0 !important;
@@ -703,6 +783,135 @@ ui <- function(request) page_fluid(
         min-width: 0;
       }
 
+      /* Trim headroom above the first heading in the probability panel */
+      .probability-section { padding-top: 6px; }
+      .probability-section > .section-divider:first-child { margin-top: 0; }
+
+      /* Gauge scales with available width instead of a fixed pixel height */
+      .gauge-wrap {
+        width: 100%;
+        max-width: 560px;
+        aspect-ratio: 1.65 / 1;
+        margin-inline: auto;
+      }
+      .gauge-wrap .html-widget,
+      .gauge-wrap .plotly,
+      .gauge-wrap .js-plotly-plot {
+        width: 100% !important;
+        height: 100% !important;
+      }
+
+      /* ── Section dividers — rendered as semantic headings ────────────── */
+      .section-divider {
+        display: flex; align-items: center; gap: 8px;
+        margin: 14px 0 10px;
+        color: var(--text-muted); font-size: 0.72rem; font-weight: 700;
+        letter-spacing: 0.09em; text-transform: uppercase;
+      }
+      .section-divider::after {
+        content: ''; flex: 1; height: 1px; background: var(--border);
+      }
+
+      /* ── Win-probability supporting details (tucked under the meter) ───── */
+      .matchup {
+        margin-top: 4px;
+        border-top: 1px solid var(--border);
+        padding-top: 14px;
+      }
+      /* Favored-side verdict bridges meter → numbers */
+      .verdict-chip {
+        text-align: center; font-size: clamp(0.95rem, 4.5vw, 1rem); font-weight: 700;
+        color: var(--text); margin-bottom: 12px;
+      }
+      .fav-atk .verdict-chip { color: var(--atk-text); }
+      .fav-def .verdict-chip { color: var(--def-text); }
+      /* Three aligned columns: attacker · simulations · defender */
+      .matchup-readout {
+        display: flex; align-items: flex-start;
+      }
+      .mr-side {
+        flex: 1 1 0; min-width: 0; text-align: center;
+        padding: 0 8px; display: flex; flex-direction: column; gap: 2px;
+      }
+      .mr-atk, .mr-def { position: relative; }
+      /* Hairline separators between the three groups */
+      .mr-sims { border-left: 1px solid var(--border); border-right: 1px solid var(--border); }
+      .mr-pct {
+        font-size: clamp(1.35rem, 7vw, 1.7rem); font-weight: 800; line-height: 1.05;
+        font-variant-numeric: tabular-nums; color: var(--text);
+      }
+      .mr-atk .mr-pct { color: var(--atk-text); }
+      .mr-def .mr-pct { color: var(--def-text); }
+      .mr-team {
+        font-size: 0.7rem; font-weight: 700; text-transform: uppercase;
+        letter-spacing: 0.07em; color: var(--text-muted);
+      }
+      /* The favored side leads; the trailing side recedes (kept readable) */
+      .matchup.fav-atk .mr-def .mr-pct,
+      .matchup.fav-def .mr-atk .mr-pct { opacity: 0.55; }
+
+      /* Very narrow phones: keep attacker vs defender side by side, drop the
+         simulations count to a full-width second row so nothing gets cramped. */
+      @media (max-width: 374px) {
+        .matchup-readout {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px 0;
+        }
+        .mr-sims {
+          grid-column: 1 / -1;
+          grid-row: 2;
+          border-left: 0;
+          border-right: 0;
+          border-top: 1px solid var(--border);
+          padding-top: 10px;
+        }
+      }
+
+      /* ── Visible focus for keyboard users ────────────────────────────── */
+      .form-control:focus-visible,
+      .btn:focus-visible,
+      .accordion-button:focus-visible,
+      #scenario_tabs.nav-tabs > li > a:focus-visible,
+      .tabs-row-btn:focus-visible {
+        outline: 2px solid var(--def-text) !important;
+        outline-offset: 2px;
+        box-shadow: none !important;
+      }
+
+      /* ── Generic muted helper text ───────────────────────────────────── */
+      .dashboard-note { font-size: 0.85rem; color: var(--text-muted); margin-bottom: 10px; }
+
+      /* ── Recommendation callout cards ────────────────────────────────── */
+      .rec-callouts { display: flex; flex-direction: column; gap: var(--s1); margin-top: var(--s1); }
+      .rec-card {
+        background: var(--surface); border: 1px solid var(--border);
+        border-left-width: 4px; border-radius: var(--radius);
+        padding: 12px 14px;
+      }
+      .rec-card-atk { border-left-color: var(--atk-fill); }
+      .rec-card-def { border-left-color: var(--def-fill); }
+      .rec-card-title {
+        font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.07em;
+        font-weight: 700; color: var(--text-muted); margin-bottom: 4px;
+      }
+      .rec-card-unit { font-size: 1.15rem; font-weight: 800; }
+      .rec-card-atk .rec-card-unit { color: var(--atk-text); }
+      .rec-card-def .rec-card-unit { color: var(--def-text); }
+      .rec-card-meta { font-size: 0.85rem; color: var(--text); margin-top: 2px; }
+
+      /* ── Content sections (replace card wrappers in main panel) ──────── */
+      .content-section { padding: 16px; }
+
+      /* ── Run button — muted military green ───────────────────────────── */
+      .btn-run {
+        background: #3d7a52 !important; color: #fff !important;
+        border: none !important; font-weight: 600; letter-spacing: 0.03em;
+        padding: 10px !important; border-radius: 3px !important;
+      }
+      .btn-run:hover  { background: #326645 !important; }
+      .btn-run:active { background: #285438 !important; }
+
       /* ── Mobile ──────────────────────────────────────────────────────────── */
       @media (max-width: 575.98px) {
         .tabs-row-btn { flex: 0 0 44px; width: 44px; height: 44px; font-size: 1.3rem; }
@@ -712,7 +921,12 @@ ui <- function(request) page_fluid(
         #scenario_tabs.nav-tabs { height: 44px; }
         #scenario_tabs.nav-tabs > li > a { height: 38px; min-width: 58px; padding: 0 8px; font-size: 1rem; }
         #scenario_tabs.nav-tabs > li > a[data-value='__add_tab__'] { min-width: 44px; }
-        .app-title-bar { padding: 6px 12px; }
+        .app-title-bar {
+          padding: 6px 12px;
+          padding-top: max(6px, env(safe-area-inset-top));
+          padding-left: max(12px, env(safe-area-inset-left));
+          padding-right: max(12px, env(safe-area-inset-right));
+        }
 
         /* Sidebar on mobile: bslib absolutely-positions the aside panel,
            but the grid row still reserves its height as a gap.
@@ -766,6 +980,63 @@ ui <- function(request) page_fluid(
         tabContent.classList.toggle('sidebar-open', !!sidebarOpen);
       }
 
+      function scrollActiveTab(behavior) {
+        var el = document.querySelector('#scenario_tabs li.active > a, #scenario_tabs .nav-link.active');
+        if (el && el.scrollIntoView) {
+          el.scrollIntoView({behavior: behavior || 'auto', inline: 'center', block: 'nearest'});
+        }
+      }
+
+      function keepFocusedSidebarFieldVisible(target) {
+        var isMobile = window.matchMedia('(max-width: 575.98px)').matches;
+        if (!isMobile) return;
+        var tabContent = document.querySelector('.tab-content');
+        if (!tabContent || !tabContent.classList.contains('sidebar-open')) return;
+        var activeField = target || document.activeElement;
+        if (!activeField || !activeField.matches('input, select, textarea')) return;
+        var activeSidebar = activeField.closest('aside.sidebar');
+        if (!activeSidebar) return;
+        setTimeout(function() {
+          if (!(document.activeElement === activeField || target === activeField)) return;
+          if (!activeField.scrollIntoView) return;
+
+          var fieldRect = activeField.getBoundingClientRect();
+          var sidebarRect = activeSidebar.getBoundingClientRect();
+
+          var clipped =
+            fieldRect.top < sidebarRect.top ||
+            fieldRect.bottom > sidebarRect.bottom;
+
+          if (clipped) {
+            activeField.scrollIntoView({
+              behavior: 'smooth',
+              block: 'nearest',
+              inline: 'nearest'
+            });
+          }
+        }, 75);
+      }
+
+      // Keep the spacer + --header-height in lockstep with the fixed header's
+      // actual rendered height (changes with safe-area insets, font loading,
+      // orientation, and the tab strip wrapping).
+      // Frame guard: bursts of ResizeObserver/resize callbacks collapse into a
+      // single measurement on the next frame instead of one per event.
+      var headerSyncFrame = null;
+      function syncHeaderHeight() {
+        if (headerSyncFrame !== null) return;
+        headerSyncFrame = requestAnimationFrame(function() {
+          headerSyncFrame = null;
+          var spacer = document.getElementById('header-spacer');
+          var header = document.querySelector('.app-sticky-header');
+          if (header && spacer) {
+            var headerHeight = header.offsetHeight + 'px';
+            document.documentElement.style.setProperty('--header-height', headerHeight);
+            spacer.style.height = headerHeight;
+          }
+        });
+      }
+
       function hoistTabContent() {
         var spacer     = document.getElementById('header-spacer');
         var header     = document.querySelector('.app-sticky-header');
@@ -774,11 +1045,11 @@ ui <- function(request) page_fluid(
           spacer.parentNode.insertBefore(tabContent, spacer.nextSibling);
           spacer._hoisted = true;
         }
-        // Always sync spacer height to actual fixed header height
-        if (header && spacer) {
-          var headerHeight = header.offsetHeight + 'px';
-          document.documentElement.style.setProperty('--header-height', headerHeight);
-          spacer.style.height = headerHeight;
+        syncHeaderHeight();
+        // Observe the header once so height changes resync without a resize event.
+        if (header && !header._ro && window.ResizeObserver) {
+          header._ro = new ResizeObserver(syncHeaderHeight);
+          header._ro.observe(header);
         }
         syncSidebarScrollState();
       }
@@ -787,23 +1058,25 @@ ui <- function(request) page_fluid(
       $(document).on('shiny:sessioninitialized', hoistTabContent);
       window.addEventListener('resize', hoistTabContent);
       document.addEventListener('bslib.sidebar', syncSidebarScrollState, true);
-      document.addEventListener('shown.bs.tab', syncSidebarScrollState, true);
-
-      Shiny.addCustomMessageHandler('close_sidebar', function(_) {
-        var activePane = document.querySelector('.tab-content > .tab-pane.active');
-        if (!activePane) return;
-        var activeLayout = activePane.querySelector('.bslib-sidebar-layout');
-        if (!activeLayout || activeLayout.classList.contains('sidebar-collapsed')) return;
-        var toggle = activeLayout.querySelector('.collapse-toggle');
-        if (toggle) toggle.click();
-      });
+      document.addEventListener('shown.bs.tab', function() {
+        syncSidebarScrollState();
+        setTimeout(function() { scrollActiveTab('auto'); }, 50);
+      }, true);
+      document.addEventListener('focusin', function(e) {
+        keepFocusedSidebarFieldVisible(e.target);
+      }, true);
+      document.addEventListener('click', function(e) {
+        keepFocusedSidebarFieldVisible(e.target);
+      }, true);
+      if (window.visualViewport) {
+        window.visualViewport.addEventListener('resize', function() {
+          keepFocusedSidebarFieldVisible();
+        });
+      }
 
       Shiny.addCustomMessageHandler('scroll_active_tab', function(_) {
         setTimeout(function() {
-          var el = document.querySelector('#scenario_tabs li.active > a, #scenario_tabs .nav-link.active');
-          if (el && el.scrollIntoView) {
-            el.scrollIntoView({behavior: 'smooth', inline: 'center', block: 'nearest'});
-          }
+          scrollActiveTab('smooth');
           syncSidebarScrollState();
         }, 50);
       });
@@ -825,7 +1098,7 @@ ui <- function(request) page_fluid(
         if (!$('#custom-reconnect').length) {
           $('body').prepend(
             '<div id=\"custom-reconnect\" style=\"position:fixed;top:0;left:0;right:0;' +
-            'z-index:99999;background:#e74c3c;color:white;text-align:center;' +
+            'z-index:99999;background:#a02020;color:white;text-align:center;' +
             'padding:12px;font-size:15px;font-family:sans-serif;\">' +
             'Connection lost. <a href=\"' + window.location.href + '\" ' +
             'style=\"color:white;text-decoration:underline;font-weight:bold;\">' +
@@ -842,10 +1115,10 @@ ui <- function(request) page_fluid(
 
     div(
       class = "app-title-bar",
-      span(class = "app-title-icon", style = "font-size: 1.4rem;", "\u2694\uFE0F"),
-      span(class = "app-title-text",
-           style = "font-size: 1.15rem; font-weight: 600;",
-           "d1066 Battle Simulator")
+      tags$h1(class = "app-title-text",
+              style = "font-size: 1.15rem; font-weight: 600; margin: 0;",
+              "d1066 Battle Simulator"),
+      div(class = "app-title-spacer")
     ),
 
     # Control bar: [sidebar toggle] [scrollable tab strip] [close]
